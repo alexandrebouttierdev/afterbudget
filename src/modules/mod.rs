@@ -1,0 +1,9 @@
+pub mod budget;
+pub mod categories;
+pub mod commun;
+pub mod import_export;
+pub mod onboarding;
+pub mod parametres;
+pub mod recurrences;
+pub mod statistiques;
+pub mod transactions;

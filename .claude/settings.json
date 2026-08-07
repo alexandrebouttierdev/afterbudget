@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(//var/folders/lh/1gj72p5d2550c7ymdj5frkbm0000gn/T/claude-code-upload/**)",
+      "Read(//private/var/folders/lh/1gj72p5d2550c7ymdj5frkbm0000gn/T/claude-code-upload/**)"
+    ]
+  },
+  "autoApprove": true
+}
