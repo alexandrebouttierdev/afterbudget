@@ -9,21 +9,29 @@ const COLONNES: &str = "id, kind, label, amount_cents, category_id, day_of_month
      start_year, start_month, end_year, end_month, note, is_active, created_at, updated_at";
 
 fn depuis_ligne(ligne: &rusqlite::Row<'_>) -> rusqlite::Result<RecurringRule> {
+    let id: String = ligne.get(0)?;
     let genre: String = ligne.get(1)?;
     let fin_annee: Option<i32> = ligne.get(8)?;
     let fin_mois: Option<u32> = ligne.get(9)?;
     let cree: String = ligne.get(12)?;
     let modifie: String = ligne.get(13)?;
 
+    let kind = TransactionKind::from_str(&genre)
+        .ok_or_else(|| rusqlite::Error::FromSqlConversionFailure(
+            1,
+            rusqlite::types::Type::Text,
+            format!("Récurrence {id} : type inconnu « {genre} ».").into(),
+        ))?;
+
     let horodatage = |brut: &str| {
         chrono::DateTime::parse_from_rfc3339(brut)
+            .ok()
             .map(|d| d.with_timezone(&chrono::Utc))
-            .unwrap_or_else(|_| chrono::Utc::now())
     };
 
     Ok(RecurringRule {
-        id: ligne.get(0)?,
-        kind: TransactionKind::from_str(&genre).unwrap_or(TransactionKind::Expense),
+        id: id.clone(),
+        kind,
         label: ligne.get(2)?,
         amount: Money::from_cents(ligne.get(3)?),
         category_id: ligne.get(4)?,
@@ -35,8 +43,20 @@ fn depuis_ligne(ligne: &rusqlite::Row<'_>) -> rusqlite::Result<RecurringRule> {
         },
         note: ligne.get(10)?,
         is_active: ligne.get::<_, i64>(11)? != 0,
-        created_at: horodatage(&cree),
-        updated_at: horodatage(&modifie),
+        created_at: horodatage(&cree).ok_or_else(|| {
+            rusqlite::Error::FromSqlConversionFailure(
+                12,
+                rusqlite::types::Type::Text,
+                format!("Récurrence {id} : horodatage invalide « {cree} ».").into(),
+            )
+        })?,
+        updated_at: horodatage(&modifie).ok_or_else(|| {
+            rusqlite::Error::FromSqlConversionFailure(
+                13,
+                rusqlite::types::Type::Text,
+                format!("Récurrence {id} : horodatage invalide « {modifie} ».").into(),
+            )
+        })?,
     })
 }
 

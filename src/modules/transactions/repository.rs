@@ -5,28 +5,47 @@ use crate::core::db::pool::DatabasePool;
 use crate::core::utils::last_day_of_month;
 use crate::domaine::transaction::Transaction;
 
-fn row_to_transaction(row: &TransactionRow) -> Transaction {
+fn row_to_transaction(row: &TransactionRow) -> Result<Transaction, String> {
     use crate::domaine::argent::Money;
     use crate::domaine::transaction::{TransactionKind, TransactionStatus};
 
-    Transaction {
+    let kind = TransactionKind::from_str(&row.kind).ok_or_else(|| {
+        format!("Transaction {} : type inconnu « {} ».", row.id, row.kind)
+    })?;
+    let transaction_date = chrono::NaiveDate::parse_from_str(&row.transaction_date, "%Y-%m-%d")
+        .map_err(|_| {
+            format!(
+                "Transaction {} : date invalide « {} ».",
+                row.id, row.transaction_date
+            )
+        })?;
+    let status = TransactionStatus::from_str(&row.status).ok_or_else(|| {
+        format!("Transaction {} : statut inconnu « {} ».", row.id, row.status)
+    })?;
+    let parse_horodatage = |brut: &str| {
+        chrono::DateTime::parse_from_rfc3339(brut)
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .map_err(|_| {
+                format!(
+                    "Transaction {} : horodatage invalide « {} ».",
+                    row.id, brut
+                )
+            })
+    };
+
+    Ok(Transaction {
         id: row.id.clone(),
-        kind: TransactionKind::from_str(&row.kind).unwrap_or(TransactionKind::Expense),
+        kind,
         label: row.label.clone(),
         amount: Money::from_cents(row.amount_cents),
-        transaction_date: chrono::NaiveDate::parse_from_str(&row.transaction_date, "%Y-%m-%d")
-            .unwrap_or_else(|_| chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap()),
-        status: TransactionStatus::from_str(&row.status).unwrap_or(TransactionStatus::Pending),
+        transaction_date,
+        status,
         category_id: row.category_id.clone(),
         note: row.note.clone(),
         recurring_rule_id: row.recurring_rule_id.clone(),
-        created_at: chrono::DateTime::parse_from_rfc3339(&row.created_at)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .unwrap_or_else(|_| chrono::Utc::now()),
-        updated_at: chrono::DateTime::parse_from_rfc3339(&row.updated_at)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .unwrap_or_else(|_| chrono::Utc::now()),
-    }
+        created_at: parse_horodatage(&row.created_at)?,
+        updated_at: parse_horodatage(&row.updated_at)?,
+    })
 }
 
 pub fn find_by_month(
@@ -112,7 +131,7 @@ pub fn find_by_month(
     let mut transactions = Vec::new();
     for row in rows {
         let row = row.map_err(|e| format!("Erreur de lecture : {}", e))?;
-        transactions.push(row_to_transaction(&row));
+        transactions.push(row_to_transaction(&row)?);
     }
 
     Ok(transactions)
@@ -168,7 +187,7 @@ pub fn find_recent_by_month(
     let mut transactions = Vec::new();
     for row in rows {
         let row = row.map_err(|e| format!("Erreur de lecture : {}", e))?;
-        transactions.push(row_to_transaction(&row));
+        transactions.push(row_to_transaction(&row)?);
     }
 
     Ok(transactions)
@@ -202,7 +221,7 @@ pub fn find_by_id(pool: &DatabasePool, id: &str) -> Result<Option<Transaction>, 
         .map_err(|e| format!("Erreur de requête : {}", e))?;
 
     match rows.next() {
-        Some(Ok(row)) => Ok(Some(row_to_transaction(&row))),
+        Some(Ok(row)) => Ok(Some(row_to_transaction(&row)?)),
         Some(Err(e)) => Err(format!("Erreur de lecture : {}", e)),
         None => Ok(None),
     }

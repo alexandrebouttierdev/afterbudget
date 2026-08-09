@@ -32,3 +32,19 @@ fn test_couleurs_categories_valides() {
         assert_eq!(cat.color.len(), 7);
     }
 }
+
+/// Une catégorie aux horodatages invalides fait échouer le chargement
+/// (AB-008). Le kind invalide est bloqué par le CHECK du schéma.
+#[test]
+fn une_categorie_invalide_fait_echouer_le_chargement() {
+    let pool = base_temporaire::creer_base_test();
+    pool.conn
+        .execute(
+            "INSERT INTO categories (id, kind, name, icon, color, sort_order, is_default, is_active, created_at, updated_at)
+             VALUES ('cat-corrompue', 'expense', 'X', 'x', '#3B82F6', 99, 0, 1, 'pas-un-horodatage', '2026-08-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+    assert!(repo::find_all_active(&pool).is_err());
+    assert!(repo::find_by_id(&pool, "cat-corrompue").is_err());
+}

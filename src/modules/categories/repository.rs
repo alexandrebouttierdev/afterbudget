@@ -3,25 +3,29 @@ use rusqlite::params;
 use crate::core::db::modeles::CategoryRow;
 use crate::core::db::pool::DatabasePool;
 use crate::domaine::categorie::Category;
-use crate::domaine::transaction::TransactionKind;
 
-fn row_to_category(row: &CategoryRow) -> Category {
-    Category {
+fn row_to_category(row: &CategoryRow) -> Result<Category, String> {
+    let kind = crate::domaine::transaction::TransactionKind::from_str(&row.kind).ok_or_else(|| {
+        format!("Catégorie {} : type inconnu « {} ».", row.id, row.kind)
+    })?;
+    let parse_horodatage = |brut: &str| {
+        chrono::DateTime::parse_from_rfc3339(brut)
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .map_err(|_| format!("Catégorie {} : horodatage invalide « {} ».", row.id, brut))
+    };
+
+    Ok(Category {
         id: row.id.clone(),
-        kind: TransactionKind::from_str(&row.kind).unwrap_or(TransactionKind::Expense),
+        kind,
         name: row.name.clone(),
         icon: row.icon.clone(),
         color: row.color.clone(),
         sort_order: row.sort_order,
         is_default: row.is_default,
         is_active: row.is_active,
-        created_at: chrono::DateTime::parse_from_rfc3339(&row.created_at)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .unwrap_or_else(|_| chrono::Utc::now()),
-        updated_at: chrono::DateTime::parse_from_rfc3339(&row.updated_at)
-            .map(|d| d.with_timezone(&chrono::Utc))
-            .unwrap_or_else(|_| chrono::Utc::now()),
-    }
+        created_at: parse_horodatage(&row.created_at)?,
+        updated_at: parse_horodatage(&row.updated_at)?,
+    })
 }
 
 pub fn find_all_active(pool: &DatabasePool) -> Result<Vec<Category>, String> {
@@ -55,7 +59,7 @@ pub fn find_all_active(pool: &DatabasePool) -> Result<Vec<Category>, String> {
     let mut categories = Vec::new();
     for row in rows {
         let row = row.map_err(|e| format!("Erreur de lecture : {}", e))?;
-        categories.push(row_to_category(&row));
+        categories.push(row_to_category(&row)?);
     }
 
     Ok(categories)
@@ -91,7 +95,7 @@ pub fn find_all(pool: &DatabasePool) -> Result<Vec<Category>, String> {
     let mut categories = Vec::new();
     for row in rows {
         let row = row.map_err(|e| format!("Erreur de lecture : {}", e))?;
-        categories.push(row_to_category(&row));
+        categories.push(row_to_category(&row)?);
     }
 
     Ok(categories)
@@ -128,7 +132,7 @@ pub fn find_by_kind(pool: &DatabasePool, kind: &str) -> Result<Vec<Category>, St
     let mut categories = Vec::new();
     for row in rows {
         let row = row.map_err(|e| format!("Erreur de lecture : {}", e))?;
-        categories.push(row_to_category(&row));
+        categories.push(row_to_category(&row)?);
     }
 
     Ok(categories)
@@ -161,7 +165,7 @@ pub fn find_by_id(pool: &DatabasePool, id: &str) -> Result<Option<Category>, Str
         .map_err(|e| format!("Erreur de requête : {}", e))?;
 
     match rows.next() {
-        Some(Ok(row)) => Ok(Some(row_to_category(&row))),
+        Some(Ok(row)) => Ok(Some(row_to_category(&row)?)),
         Some(Err(e)) => Err(format!("Erreur de lecture : {}", e)),
         None => Ok(None),
     }

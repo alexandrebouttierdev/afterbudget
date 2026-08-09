@@ -154,3 +154,20 @@ fn supprimer_une_regle_absente_echoue() {
     let pool = base();
     assert!(commandes::supprimer(&pool, "id-inexistant").is_err());
 }
+
+/// Une règle aux horodatages invalides fait échouer le listage (AB-008).
+#[test]
+fn une_regle_corrompue_fait_echouer_le_listage() {
+    let pool = base();
+    pool.conn
+        .execute(
+            "INSERT INTO recurring_rules (id, kind, label, amount_cents, category_id,
+                day_of_month, start_year, start_month, end_year, end_month, note,
+                is_active, created_at, updated_at)
+             VALUES ('regle-corrompue', 'expense', 'X', 1000, 'logement', 5, 2026, 8,
+                NULL, NULL, NULL, 1, 'pas-un-horodatage', '2026-08-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+    assert!(commandes::lister(&pool).is_err());
+}

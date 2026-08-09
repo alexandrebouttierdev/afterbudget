@@ -140,3 +140,32 @@ fn modifier_une_transaction_absente_echoue() {
     assert!(repo::update(&pool, &tx).is_err());
     assert!(repo::delete_by_id(&pool, "id-inexistant").is_err());
 }
+
+/// Une ligne SQLite invalide doit faire échouer le chargement avec un
+/// message contextualisé, jamais être transformée en valeurs par défaut
+/// (AB-008).
+#[test]
+fn une_ligne_invalide_fait_echouer_le_chargement() {
+    let pool = base_temporaire::creer_base_test();
+    // Les CHECK du schéma bloquent déjà kind/statut invalides à l'insertion ;
+    // la date et les horodatages, eux, passent : c'est sur eux que le
+    // mapping strict doit échouer (AB-008).
+    pool.conn
+        .execute(
+            "INSERT INTO transactions (id, kind, label, amount_cents, transaction_date, status,
+                category_id, note, created_at, updated_at)
+             VALUES ('ligne-corrompue', 'expense', 'X', 1000, '2026-99-99', 'pending',
+                'autre', NULL, 'pas-un-horodatage', '2026-08-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+
+    // find_by_id n'applique pas de filtre de date : le WHERE du mois
+    // écarterait la ligne corrompue (date « 2026-99-99 » hors de la plage)
+    // avant qu'elle n'atteigne le mapping strict (AB-008).
+    let erreur = repo::find_by_id(&pool, "ligne-corrompue").unwrap_err();
+    assert!(
+        erreur.contains("ligne-corrompue"),
+        "l'erreur doit nommer la ligne : {erreur}"
+    );
+}
