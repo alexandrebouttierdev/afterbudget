@@ -10,7 +10,7 @@ license = "MIT"
 [package.metadata]
 repository = "https://github.com/alexandrebouttierdev/afterbudget"
 keywords = ["budget", "finance", "desktop", "sqlite"]
-categories = ["command-line-utilities"]
+categories = ["gui", "finance"]
 
 [dependencies]
 iced = { version = "0.13", features = ["tokio", "image", "svg", "canvas"] }
