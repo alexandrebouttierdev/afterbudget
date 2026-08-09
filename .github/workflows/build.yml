@@ -316,22 +316,6 @@ jobs:
           done
           ls -la builds/
 
-      - name: Publish GitHub Release "Latest"
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest
-          body: |
-            Derniers builds de la branche `master`.
-
-            - Ubuntu : `.deb` (+ `.AppImage` si disponible)
-            - Fedora : `.rpm`
-            - macOS : `.dmg` universel (Apple Silicon + Intel)
-            - Windows : `.exe`
-          files: builds/*
-          overwrite_files: true
-          fail_on_unmatched_files: true
-
       - name: Publish versioned release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -340,16 +324,24 @@ jobs:
           VERSION=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
           TAG="v${VERSION}"
           if git ls-remote --tags origin "$TAG" | grep -q .; then
-            echo "Le tag $TAG existe déjà : pas de nouvelle release versionnée."
-          else
-            echo "Publication de la release $TAG"
-            args=()
-            for file in builds/*; do
-              [ -f "$file" ] || continue
-              base=$(basename "$file")
-              versionne="${base/latest/$VERSION}"
-              args+=( "$file#$versionne" )
-            done
-            gh release create "$TAG" "${args[@]}" --title "AfterBudget $VERSION" \
-              --notes "Builds versionnés d'AfterBudget $VERSION."
+            echo "Le tag $TAG existe déjà : la version $VERSION est déjà publiée, aucune nouvelle release."
+            exit 0
           fi
+
+          echo "Publication de la release $TAG (version $VERSION)"
+          args=()
+          for file in builds/*; do
+            [ -f "$file" ] || continue
+            base=$(basename "$file")
+            # Chaque asset est publié sous deux noms :
+            # - le nom stable `-latest` : URL immuable de la landing page
+            #   (`releases/latest/download/...`), valable tant que cette
+            #   release reste la « latest » de GitHub (tag semver) ;
+            # - le nom versionné : référence immuable de la mise à jour en
+            #   interne, retrouvé par l'application selon l'extension.
+            versionne="${base/latest/$VERSION}"
+            args+=( "$file#$base" "$file#$versionne" )
+            echo "  asset : $base + $versionne"
+          done
+          gh release create "$TAG" "${args[@]}" --title "AfterBudget $VERSION" \
+            --notes "Builds versionnés d'AfterBudget $VERSION."
