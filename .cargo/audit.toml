@@ -1,0 +1,6 @@
+[advisories]
+# RUSTSEC-2026-0002 : lru 0.12.5 (IterMut unsound) est piné par iced_glyphon
+# 0.6.0, dépendance d'iced 0.13 (dernière version publiée). Aucun correctif
+# upstream disponible ; le graphe AfterBudget n'utilise ni iter_mut ni la
+# fonctionnalité concernée. À réévaluer à chaque montée d'iced.
+ignore = ["RUSTSEC-2026-0002"]

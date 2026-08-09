@@ -2,9 +2,15 @@
 name = "afterbudget"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.87"
 description = "Application desktop de gestion de budget personnel"
 authors = ["AfterBudget"]
 license = "MIT"
+
+[package.metadata]
+repository = "https://github.com/alexandrebouttierdev/afterbudget"
+keywords = ["budget", "finance", "desktop", "sqlite"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 iced = { version = "0.13", features = ["tokio", "image", "svg", "canvas"] }
@@ -18,7 +24,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs = "5"
 rfd = "0.14"
 thiserror = "1"
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.19", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
