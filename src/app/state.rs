@@ -145,7 +145,7 @@ pub fn update_pertinente(locale: &Version, distante: &Version, ignoree: Option<&
         return false;
     }
     match ignoree {
-        Some(ignoree) => distante != &Version::parse(ignoree).unwrap_or(locale.clone()),
+        Some(ignoree) => distante != &Version::parse(ignoree).unwrap_or(*locale),
         None => true,
     }
 }

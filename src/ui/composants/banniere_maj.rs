@@ -65,7 +65,12 @@ pub fn banniere(state: &AppState) -> Option<Element<'static, Message>> {
             .width(Length::Fill)
             .padding([Esp::SM + Esp::XS, Esp::LG])
             .style(move |_theme| {
-                styles::surface_semantique(palette, palette.accent_surface, palette.accent, Rayon::MD)
+                styles::surface_semantique(
+                    palette,
+                    palette.accent_surface,
+                    palette.accent,
+                    Rayon::MD,
+                )
             })
             .into(),
     )

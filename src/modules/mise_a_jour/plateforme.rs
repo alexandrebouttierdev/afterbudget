@@ -34,7 +34,9 @@ pub fn extension_pour(os: &str, ids: &[&str]) -> Option<&'static str> {
         "macos" => Some("dmg"),
         "linux" => {
             let de = ids.iter().any(|id| *id == "debian" || *id == "ubuntu");
-            let rhel = ids.iter().any(|id| *id == "fedora" || *id == "rhel" || *id == "centos");
+            let rhel = ids
+                .iter()
+                .any(|id| *id == "fedora" || *id == "rhel" || *id == "centos");
             if de {
                 Some("deb")
             } else if rhel {
@@ -96,10 +98,7 @@ mod tests {
     /// présentes : l'ordre de `ID_LIKE` est signifiant chez les dérivés.
     #[test]
     fn la_famille_debian_prime() {
-        assert_eq!(
-            extension_pour("linux", &["debian", "fedora"]),
-            Some("deb")
-        );
+        assert_eq!(extension_pour("linux", &["debian", "fedora"]), Some("deb"));
     }
 
     #[test]

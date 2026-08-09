@@ -128,7 +128,10 @@ mod tests {
         );
         assert_eq!(info.assets.len(), 2);
         assert_eq!(info.assets[0].nom, "afterbudget-ubuntu-0.2.3.deb");
-        assert_eq!(info.assets[0].url, "https://github.com/.../afterbudget-ubuntu-0.2.3.deb");
+        assert_eq!(
+            info.assets[0].url,
+            "https://github.com/.../afterbudget-ubuntu-0.2.3.deb"
+        );
     }
 
     #[test]

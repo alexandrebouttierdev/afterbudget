@@ -7,9 +7,7 @@ use std::path::{Path, PathBuf};
 
 /// Dossier où poser l'installeur téléchargé.
 fn dossier_telechargements() -> PathBuf {
-    dirs::download_dir().unwrap_or_else(|| {
-        dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
-    })
+    dirs::download_dir().unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")))
 }
 
 /// Nom de fichier sûr, sans les caractères interdits ou douteux.
@@ -86,7 +84,10 @@ mod tests {
 
     #[test]
     fn un_nom_normal_est_conserve() {
-        assert_eq!(nom_de_fichier_sur("afterbudget-0.2.3.deb"), "afterbudget-0.2.3.deb");
+        assert_eq!(
+            nom_de_fichier_sur("afterbudget-0.2.3.deb"),
+            "afterbudget-0.2.3.deb"
+        );
     }
 
     #[test]

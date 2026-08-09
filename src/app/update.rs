@@ -866,9 +866,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             };
             state.update_downloading = true;
             Task::perform(
-                async move {
-                    maj_telechargement::telecharger_installeur(&asset.url, &asset.nom).await
-                },
+                async move { maj_telechargement::telecharger_installeur(&asset.url, &asset.nom).await },
                 Message::DownloadResult,
             )
         }
@@ -905,13 +903,11 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         }
         Message::IgnoreUpdate => {
             if let (Some(info), Some(db)) = (state.update_info.clone(), state.db.as_ref()) {
-                if let Err(e) = parametres_service::mettre_a_jour_version_ignoree(
-                    db,
-                    &info.version.to_string(),
-                ) {
-                    state.notification = Some(Notification::erreur(format!(
-                        "Version non mémorisée : {e}"
-                    )));
+                if let Err(e) =
+                    parametres_service::mettre_a_jour_version_ignoree(db, &info.version.to_string())
+                {
+                    state.notification =
+                        Some(Notification::erreur(format!("Version non mémorisée : {e}")));
                     return Task::none();
                 }
                 state.settings = parametres_service::obtenir_parametres(db).ok().flatten();

@@ -72,7 +72,11 @@ mod tests {
     #[test]
     fn un_format_invalide_est_refuse() {
         for invalide in ["", "v", "abc", "1.2", "1.2.3.4", "1.x.3", "1.2.3-rc1"] {
-            assert_eq!(Version::parse(invalide), None, "{invalide:?} doit être refusé");
+            assert_eq!(
+                Version::parse(invalide),
+                None,
+                "{invalide:?} doit être refusé"
+            );
         }
     }
 
