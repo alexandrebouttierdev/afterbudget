@@ -12,32 +12,34 @@ modules/
 │   ├── commandes.rs       — orchestration des cas d'usage
 │   ├── mappers.rs         — mapping entre couches
 │   ├── service.rs         — logique métier (pas de SQL)
+│   ├── composants/
+│   │   ├── mod.rs
+│   │   ├── bloc_solde.rs  — encart solde prévisionnel
+│   │   └── indicateur.rs  — indicateur de statut financier
 │   ├── views/
+│   │   ├── mod.rs
 │   │   └── index.rs       — écran tableau de bord
 │   └── tests/
-│       └── mod.rs         — tests d'intégration
+│       ├── mod.rs         — tests d'intégration
+│       └── commun.rs      — helpers de tests partagés
 ├── categories/
 │   ├── mod.rs
 │   ├── commandes.rs
-│   ├── mappers.rs
-│   ├── dtos/
-│   │   ├── mod.rs
-│   │   ├── creer_categorie.rs
-│   │   └── modifier_categorie.rs
-│   ├── validateurs.rs     — validation des DTOs
 │   ├── service.rs
 │   ├── repository.rs      — requêtes SQL
 │   ├── composants/
+│   │   ├── mod.rs
+│   │   └── pastille.rs    — pastille de couleur de catégorie
 │   └── tests/
+│       ├── mod.rs
+│       └── commun.rs
 ├── import_export/
 │   ├── mod.rs
 │   ├── commandes.rs
-│   ├── mappers.rs
-│   ├── dtos/
-│   │   ├── mod.rs
-│   │   └── importer_sauvegarde.rs
 │   ├── service.rs
+│   ├── views.rs           — écran export / import
 │   └── tests/
+│       └── mod.rs
 ├── onboarding/
 │   ├── mod.rs
 │   ├── commandes.rs
@@ -46,6 +48,7 @@ modules/
 │   │   ├── mod.rs
 │   │   └── terminer_onboarding.rs
 │   └── views/
+│       ├── mod.rs
 │       └── index.rs
 ├── parametres/
 │   ├── mod.rs
@@ -57,14 +60,33 @@ modules/
 │   ├── validateurs.rs
 │   ├── service.rs
 │   ├── repository.rs
-│   └── views/
-│       └── index.rs
+│   ├── composants/
+│   │   ├── mod.rs
+│   │   └── section.rs     — section de formulaire paramètres
+│   ├── views/
+│   │   ├── mod.rs
+│   │   ├── index.rs
+│   │   └── reinitialisation.rs — confirmation de réinitialisation
+│   └── tests/
+│       ├── mod.rs
+│       └── commun.rs
+├── recurrences/
+│   ├── mod.rs
+│   ├── commandes.rs
+│   ├── dtos/
+│   │   ├── mod.rs
+│   │   └── creer_recurrence.rs
+│   ├── validateurs.rs
+│   ├── service.rs
+│   ├── repository.rs
+│   └── tests.rs
 ├── statistiques/
 │   ├── mod.rs
 │   ├── commandes.rs
 │   ├── mappers.rs
 │   ├── service.rs
 │   └── views/
+│       ├── mod.rs
 │       └── index.rs
 └── transactions/
     ├── mod.rs
@@ -80,14 +102,16 @@ modules/
     ├── repository.rs
     ├── composants/
     │   ├── mod.rs
-    │   ├── filtre.rs
+    │   ├── filtres.rs
     │   └── ligne_transaction.rs
     ├── views/
     │   ├── mod.rs
     │   ├── index.rs           — liste des transactions
-    │   └── formulaire.rs      — formulaire ajout/modification
+    │   ├── formulaire.rs      — formulaire ajout/modification
+    │   └── suppression.rs     — confirmation de suppression
     └── tests/
-        └── mod.rs
+        ├── mod.rs
+        └── commun.rs
 ```
 
 ## Couches transversales
@@ -108,6 +132,7 @@ domaine/            — modèles métier purs (sans Iced, sans SQL)
   budget.rs         — BudgetSummary, FinancialStatus, MonthlyStatistics
   categorie.rs      — Category, DefaultCategory
   parametres.rs     — AppSettings
+  recurrence.rs     — RecurringRule
   transaction.rs    — Transaction, TransactionKind, TransactionStatus
 
 ui/                 — interface Iced transversale
@@ -122,8 +147,13 @@ app/                — état global Iced
   update.rs         — traitement des messages
   view.rs           — vue principale, dispatch vers les écrans
 
+  note : app/update.rs orchestre l'état ; toute persistance passe par les
+  commandes/services des modules — aucun accès repository ni SQL dans update.rs
+
 migrations/         — fichiers SQL
   0001_initial.sql
+  0002_recurrences.sql
+  0003_last_export_date.sql
 ```
 
 ## Circulation d'une action

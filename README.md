@@ -24,11 +24,11 @@ AfterBudget permet de connaître à tout moment votre **solde prévisionnel de f
 | Langage | **Rust** (édition 2021) |
 | Interface | **Iced 0.13** (native) |
 | Base de données | **SQLite** via `rusqlite` (bundled) |
-| Autres | `serde`, `chrono`, `uuid`, `tracing`, `validator`, `thiserror`, `dirs`, `rfd` |
+| Autres | `serde`, `chrono`, `uuid`, `tracing`, `validator 0.19+`, `thiserror`, `dirs`, `rfd` |
 
 ## Prérequis
 
-- Rust stable 1.75+
+- Rust stable 1.87+ (le champ `rust-version` du manifeste est tenu à jour)
 - Dépendances système Iced (Linux) : `pkg-config libx11-dev libxkbcommon-dev libfontconfig-dev`
 
 ## Compilation et lancement
@@ -43,6 +43,13 @@ cargo run
 ```bash
 cargo test --all-targets --all-features
 ```
+
+## Dépendances et sécurité
+
+- `cargo audit` est vert (`.cargo/audit.toml`).
+- Exception documentée : `lru 0.12.5` (RUSTSEC-2026-0002) est épinglée par
+  `iced_glyphon 0.6.0` (Iced 0.13, dernière version) ; la fonctionnalité
+  concernée (`IterMut`) n'est pas utilisée par AfterBudget.
 
 ## Emplacement de la base SQLite
 
@@ -66,9 +73,20 @@ La documentation détaillée est rassemblée dans [`docs/`](docs/) :
 
 ## Modules
 
-L'architecture est **modulaire** : chaque module (`transactions/`, `budget/`, `categories/`, `parametres/`,
-`statistiques/`, `import_export/`, `onboarding/`) contient ses DTOs, validateurs, composants UI,
-écrans, service, repository et tests. La logique métier est séparée du SQL et des widgets.
+L'architecture est **modulaire**. Liste exacte des modules et de leurs fichiers réels
+(sous `src/modules/`) :
+
+- `commun.rs` — règles de validation transversales (partagées)
+- `transactions/` — `mod.rs`, `commandes.rs`, `mappers.rs`, `dtos/` (`creer_transaction.rs`, `modifier_transaction.rs`, `filtrer_transactions.rs`), `validateurs.rs`, `service.rs`, `repository.rs`, `composants/` (`mod.rs`, `filtres.rs`, `ligne_transaction.rs`), `views/` (`mod.rs`, `index.rs`, `formulaire.rs`, `suppression.rs`), `tests/` (`mod.rs`, `commun.rs`)
+- `budget/` — `mod.rs`, `commandes.rs`, `mappers.rs`, `service.rs`, `composants/` (`mod.rs`, `bloc_solde.rs`, `indicateur.rs`), `views/` (`mod.rs`, `index.rs`), `tests/` (`mod.rs`, `commun.rs`)
+- `categories/` — `mod.rs`, `commandes.rs`, `service.rs`, `repository.rs`, `composants/` (`mod.rs`, `pastille.rs`), `tests/` (`mod.rs`, `commun.rs`)
+- `parametres/` — `mod.rs`, `commandes.rs`, `mappers.rs`, `dtos/` (`modifier_parametres.rs`), `validateurs.rs`, `service.rs`, `repository.rs`, `composants/` (`mod.rs`, `section.rs`), `views/` (`mod.rs`, `index.rs`, `reinitialisation.rs`), `tests/` (`mod.rs`, `commun.rs`)
+- `statistiques/` — `mod.rs`, `commandes.rs`, `mappers.rs`, `service.rs`, `views/` (`mod.rs`, `index.rs`)
+- `import_export/` — `mod.rs`, `commandes.rs`, `service.rs`, `views.rs`, `tests/` (`mod.rs`)
+- `onboarding/` — `mod.rs`, `commandes.rs`, `mappers.rs`, `dtos/` (`terminer_onboarding.rs`), `views/` (`mod.rs`, `index.rs`)
+- `recurrences/` — `mod.rs`, `commandes.rs`, `dtos/` (`creer_recurrence.rs`), `validateurs.rs`, `service.rs`, `repository.rs`, `tests.rs`
+
+La logique métier est séparée du SQL et des widgets.
 
 Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail.
 
@@ -88,11 +106,16 @@ Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail.
 
 | Plateforme | Statut |
 |---|---|
-| Linux | Compilé |
-| macOS | Non testé |
-| Windows | Non testé |
+| Linux | Compilé, testé et linté en CI (fmt, clippy, tests, doc-tests, audit) |
+| macOS | Compilé en CI (job de compilation seule) ; les tests ne s'exécutent que sur Linux |
+| Windows | Compilé en CI (job de compilation seule) ; les tests ne s'exécutent que sur Linux |
 
 ## Confidentialité
 
 Aucun revenu, dépense ou solde n'est transmis sur Internet. Les données restent sur votre
 ordinateur, dans une base SQLite locale.
+
+Les fichiers locaux sont protégés : répertoire de données en `0700` et base
+SQLite en `0600` sur Linux/macOS (pas de mode POSIX sous Windows). La base
+n'est pas chiffrée : tout utilisateur local ayant accès au système peut la
+lire s'il a les droits sur le répertoire.
