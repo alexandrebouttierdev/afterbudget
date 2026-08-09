@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=AfterBudget
+GenericName=Budget personnel
+Comment=Application desktop de gestion de budget personnel
+Exec=afterbudget
+Icon=afterbudget
+Terminal=false
+StartupNotify=true
+Categories=Office;Finance;Utility;
+Keywords=budget;finance;argent;

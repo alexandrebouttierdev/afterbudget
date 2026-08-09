@@ -1,0 +1,332 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Check
+        run: cargo check --locked --all-targets --all-features
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      - name: Tests
+        run: cargo test --locked --all-targets --all-features
+
+      - name: Doc-tests
+        run: cargo test --locked --doc --all-features
+
+      - name: Audit
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-ubuntu:
+    name: Build Ubuntu
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libx11-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libfontconfig1-dev \
+            libgtk-3-dev \
+            librsvg2-bin
+
+      - name: Build release
+        run: cargo build --locked --release --all-features
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb --locked
+
+      - name: Generate app icon
+        run: rsvg-convert -w 256 -h 256 assets/icones/portefeuille.svg -o packaging/afterbudget.png
+
+      - name: Package .deb
+        run: cargo deb
+
+      - name: Package .AppImage (best effort)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          curl -fsSL -o linuxdeploy-x86_64.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSL -o linuxdeploy-plugin-gtk.sh \
+            https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
+          export PATH="$PATH:$PWD"
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/lib
+          cp target/release/afterbudget AppDir/usr/bin/
+          cp packaging/afterbudget.desktop AppDir/usr/share/applications/
+          cp packaging/afterbudget.png AppDir/usr/share/icons/hicolor/256x256/apps/
+          for lib in libEGL.so.1 libGLESv2.so.2 libxkbcommon.so.0 libfontconfig.so.1; do
+            path=$(find /usr/lib/x86_64-linux-gnu -name "$lib" 2>/dev/null | head -1)
+            [ -n "$path" ] && cp "$path" AppDir/usr/lib/ || true
+          done
+          for lib in AppDir/usr/lib/libEGL.so.1 AppDir/usr/lib/libGLESv2.so.2 \
+                     AppDir/usr/lib/libxkbcommon.so.0 AppDir/usr/lib/libfontconfig.so.1; do
+            [ -f "$lib" ] || continue
+            ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run --appdir AppDir \
+              --deploy-deps-only "$lib"
+          done
+          ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
+            --appdir AppDir \
+            -d packaging/afterbudget.desktop \
+            -i packaging/afterbudget.png \
+            -e AppDir/usr/bin/afterbudget \
+            --plugin gtk \
+            --output appimage
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-latest
+          path: |
+            target/debian/*.deb
+            *.AppImage
+          if-no-files-found: error
+
+  build-fedora:
+    name: Build Fedora
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          dnf install -y \
+            rust \
+            cargo \
+            pkgconfig \
+            libX11-devel \
+            libxkbcommon-devel \
+            libxkbcommon-x11-devel \
+            fontconfig-devel \
+            gtk3-devel \
+            librsvg2-tools \
+            rpm-build \
+            git
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: fedora-container
+
+      - name: Build release
+        run: cargo build --locked --release --all-features
+
+      - name: Install cargo-generate-rpm
+        run: cargo install cargo-generate-rpm --locked
+
+      - name: Generate app icon
+        run: rsvg-convert -w 256 -h 256 assets/icones/portefeuille.svg -o packaging/afterbudget.png
+
+      - name: Package .rpm
+        run: cargo generate-rpm
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fedora-latest
+          path: target/generate-rpm/*.rpm
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release (aarch64)
+        run: cargo build --locked --release --all-features --target aarch64-apple-darwin
+
+      - name: Build release (x86_64)
+        run: cargo build --locked --release --all-features --target x86_64-apple-darwin
+
+      - name: Create universal binary
+        run: |
+          mkdir -p AfterBudget.app/Contents/MacOS
+          lipo -create \
+            target/aarch64-apple-darwin/release/afterbudget \
+            target/x86_64-apple-darwin/release/afterbudget \
+            -output AfterBudget.app/Contents/MacOS/afterbudget
+
+      - name: Write Info.plist
+        run: |
+          VERSION=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
+          mkdir -p AfterBudget.app/Contents
+          cat > AfterBudget.app/Contents/Info.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key>
+            <string>AfterBudget</string>
+            <key>CFBundleDisplayName</key>
+            <string>AfterBudget</string>
+            <key>CFBundleIdentifier</key>
+            <string>fr.afterbudget.app</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleExecutable</key>
+            <string>afterbudget</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>11.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Ad-hoc codesign
+        run: codesign --force --deep --sign - AfterBudget.app
+
+      - name: Package .dmg
+        run: hdiutil create -volname AfterBudget -srcfolder AfterBudget.app -ov -format UDZO afterbudget-macos-latest.dmg
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-latest
+          path: afterbudget-macos-latest.dmg
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --locked --release --all-features
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-latest
+          path: target/release/afterbudget.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: [build-ubuntu, build-fedora, build-macos, build-windows]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble builds/
+        run: |
+          set -euo pipefail
+          APP_NAME=$(sed -n 's/^name = "\([^"]*\)"/\1/p' Cargo.toml | head -1)
+          echo "App name: ${APP_NAME}"
+          mkdir -p builds
+          for platform in ubuntu-latest fedora-latest macos-latest windows-latest; do
+            count=0
+            for file in artifacts/${platform}/*; do
+              [ -f "$file" ] || continue
+              ext="${file##*.}"
+              cp "$file" "builds/${APP_NAME}-${platform}.${ext}"
+              count=$((count + 1))
+            done
+            if [ "$count" -eq 0 ]; then
+              echo "::error::Aucun fichier pour ${platform}, release annulée"
+              exit 1
+            fi
+            echo "${platform}: ${count} fichier(s)"
+          done
+          ls -la builds/
+
+      - name: Publish GitHub Release "Latest"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest
+          body: |
+            Derniers builds de la branche `master`.
+
+            - Ubuntu : `.deb` (+ `.AppImage` si disponible)
+            - Fedora : `.rpm`
+            - macOS : `.dmg` universel (Apple Silicon + Intel)
+            - Windows : `.exe`
+          files: builds/*
+          overwrite_files: true
+          fail_on_unmatched_files: true

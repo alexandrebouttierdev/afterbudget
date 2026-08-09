@@ -12,6 +12,30 @@ repository = "https://github.com/alexandrebouttierdev/afterbudget"
 keywords = ["budget", "finance", "desktop", "sqlite"]
 categories = ["gui", "finance"]
 
+[package.metadata.deb]
+maintainer = "AfterBudget <alexandrebouttierdev@users.noreply.github.com>"
+description = "Application desktop de gestion de budget personnel"
+homepage = "https://github.com/alexandrebouttierdev/afterbudget"
+section = "utils"
+priority = "optional"
+assets = [
+  ["target/release/afterbudget", "usr/bin/", "755"],
+  ["packaging/afterbudget.desktop", "usr/share/applications/", "644"],
+  ["packaging/afterbudget.png", "usr/share/icons/hicolor/256x256/apps/afterbudget.png", "644"],
+]
+
+[package.metadata.generate-rpm]
+name = "afterbudget"
+summary = "Application desktop de gestion de budget personnel"
+description = "Application desktop de gestion de budget personnel"
+license = "MIT"
+url = "https://github.com/alexandrebouttierdev/afterbudget"
+assets = [
+  { from = "target/release/afterbudget", to = "/usr/bin/", mode = "755" },
+  { from = "packaging/afterbudget.desktop", to = "/usr/share/applications/", mode = "644" },
+  { from = "packaging/afterbudget.png", to = "/usr/share/icons/hicolor/256x256/apps/afterbudget.png", mode = "644" },
+]
+
 [dependencies]
 iced = { version = "0.13", features = ["tokio", "image", "svg", "canvas"] }
 rusqlite = { version = "0.31", features = ["bundled", "backup"] }
