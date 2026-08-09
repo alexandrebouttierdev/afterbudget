@@ -44,7 +44,12 @@ pub fn valider_import(path: &Path) -> Result<(), String> {
             "recurring_rules",
         ]
     } else {
-        &["transactions", "categories", "app_settings", "schema_migrations"]
+        &[
+            "transactions",
+            "categories",
+            "app_settings",
+            "schema_migrations",
+        ]
     };
     for table in tables_requises {
         if !tables.iter().any(|t| t == table) {
@@ -104,7 +109,8 @@ pub fn importer_en_arriere_plan(chemin_actuel: PathBuf, source: PathBuf) -> Resu
 
     // Les anciens exports (v1/v2) doivent être migrés avant réouverture.
     let migre = DatabasePool::open(&chemin_actuel).and_then(|p| {
-        migrations::run_migrations(&p.conn).map_err(|e| format!("Migration de l'import impossible : {e}"))
+        migrations::run_migrations(&p.conn)
+            .map_err(|e| format!("Migration de l'import impossible : {e}"))
     });
     if let Err(e) = migre {
         let restauration = restaurer_fichier(&chemin_actuel, &backup_path);
@@ -129,12 +135,13 @@ fn remplacer_fichier(destination: &Path, source: &Path) -> Result<(), String> {
         uuid::Uuid::new_v4()
     ));
 
-    std::fs::copy(source, &temporaire)
-        .map_err(|e| format!("Copie du fichier impossible : {e}"))?;
+    std::fs::copy(source, &temporaire).map_err(|e| format!("Copie du fichier impossible : {e}"))?;
 
     let fichier = std::fs::File::open(&temporaire)
         .map_err(|e| format!("Ouverture du fichier temporaire : {e}"))?;
-    fichier.sync_all().map_err(|e| format!("Synchronisation impossible : {e}"))?;
+    fichier
+        .sync_all()
+        .map_err(|e| format!("Synchronisation impossible : {e}"))?;
     drop(fichier);
 
     std::fs::rename(&temporaire, destination)

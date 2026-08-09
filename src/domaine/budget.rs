@@ -119,7 +119,10 @@ impl BudgetSummary {
     pub fn decouvert_utilise(&self) -> Money {
         if self.projected_balance.is_negative() {
             Money::from_cents(
-                self.projected_balance.cents.saturating_neg().min(self.overdraft_limit.cents),
+                self.projected_balance
+                    .cents
+                    .saturating_neg()
+                    .min(self.overdraft_limit.cents),
             )
         } else {
             Money::ZERO
@@ -128,7 +131,12 @@ impl BudgetSummary {
 
     /// Montant dépassant le découvert autorisé. Nul tant qu'on reste dedans.
     pub fn depassement_du_decouvert(&self) -> Money {
-        Money::from_cents(self.remaining_overdraft_margin.cents.saturating_neg().max(0))
+        Money::from_cents(
+            self.remaining_overdraft_margin
+                .cents
+                .saturating_neg()
+                .max(0),
+        )
     }
 }
 
@@ -165,8 +173,8 @@ mod tests {
     #[test]
     fn test_solde_positif() {
         let summary = BudgetSummary::compute(
-            Money::from_cents(30000), // solde actuel
-            Money::from_cents(20000), // découvert
+            Money::from_cents(30000),  // solde actuel
+            Money::from_cents(20000),  // découvert
             Money::from_cents(150000), // revenus en attente
             Money::from_cents(120000), // dépenses en attente
             Money::from_cents(150000), // total revenus

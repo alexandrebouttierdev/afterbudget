@@ -186,8 +186,8 @@ fn une_transaction_verifie_la_categorie() {
         )
         .unwrap();
 
-    use crate::modules::transactions::service;
     use crate::domaine::argent::Money;
+    use crate::modules::transactions::service;
 
     assert!(service::creer_transaction(
         &pool,
@@ -262,14 +262,30 @@ fn le_comptage_sql_recoupe_le_chargement() {
             kind,
             TransactionStatus::Pending,
             "2026-08-01",
-            if kind == TransactionKind::Income { "salaire" } else { "autre" },
+            if kind == TransactionKind::Income {
+                "salaire"
+            } else {
+                "autre"
+            },
         );
         repo::insert(&pool, &tx).unwrap();
     }
     let lignes = repo::find_all_by_month(&pool, 2026, 8).unwrap();
     let par_kind = |k: &str| repo::count_by_kind(&pool, 2026, 8, k).unwrap();
-    assert_eq!(par_kind("income") as usize, lignes.iter().filter(|t| t.kind == TransactionKind::Income).count());
-    assert_eq!(par_kind("expense") as usize, lignes.iter().filter(|t| t.kind == TransactionKind::Expense).count());
+    assert_eq!(
+        par_kind("income") as usize,
+        lignes
+            .iter()
+            .filter(|t| t.kind == TransactionKind::Income)
+            .count()
+    );
+    assert_eq!(
+        par_kind("expense") as usize,
+        lignes
+            .iter()
+            .filter(|t| t.kind == TransactionKind::Expense)
+            .count()
+    );
 }
 
 /// Benchmark volumineux : 100 000 transactions dans le mois. Hors CI par
@@ -314,10 +330,9 @@ fn perf_grosses_bases() {
     );
 
     let debut_stats = std::time::Instant::now();
-    let stats = crate::modules::statistiques::service::calculer_statistiques_mensuelles(
-        &pool, 2026, 8,
-    )
-    .expect("statistiques");
+    let stats =
+        crate::modules::statistiques::service::calculer_statistiques_mensuelles(&pool, 2026, 8)
+            .expect("statistiques");
     let duree_stats = debut_stats.elapsed();
     assert_eq!(stats.transaction_count, 100_000);
     assert!(

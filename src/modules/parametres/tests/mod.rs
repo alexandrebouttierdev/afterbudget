@@ -36,7 +36,10 @@ fn une_connexion_non_inscriptible_echoue_sans_effet() {
         .execute_batch("PRAGMA query_only = OFF;")
         .expect("pragma");
     let relu = service::obtenir_parametres(&pool).unwrap().unwrap();
-    assert_eq!(relu.current_balance.cents, 10000, "la valeur doit rester inchangée");
+    assert_eq!(
+        relu.current_balance.cents, 10000,
+        "la valeur doit rester inchangée"
+    );
 }
 
 /// Mettre à jour les paramètres d'une base sans ligne id=1 échoue (AB-001).
@@ -47,9 +50,7 @@ fn mettre_a_jour_sans_ligne_de_parametres_echoue() {
         current_balance: Money::from_cents(1),
         ..Default::default()
     };
-    assert!(
-        crate::modules::parametres::repository::update_settings(&pool, &parametres).is_err()
-    );
+    assert!(crate::modules::parametres::repository::update_settings(&pool, &parametres).is_err());
 }
 
 /// La date du dernier export doit survivre au redémarrage (AB-012/P2).

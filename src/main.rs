@@ -48,7 +48,10 @@ pub fn main() -> iced::Result {
 
     if let Err(e) = state.load_data() {
         tracing::error!("Chargement initial impossible : {}", e);
-        eprintln!("AfterBudget : le chargement initial a échoué ({}) — arrêt.", e);
+        eprintln!(
+            "AfterBudget : le chargement initial a échoué ({}) — arrêt.",
+            e
+        );
         std::process::exit(1);
     }
 

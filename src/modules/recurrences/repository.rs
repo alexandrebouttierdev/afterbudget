@@ -16,12 +16,13 @@ fn depuis_ligne(ligne: &rusqlite::Row<'_>) -> rusqlite::Result<RecurringRule> {
     let cree: String = ligne.get(12)?;
     let modifie: String = ligne.get(13)?;
 
-    let kind = TransactionKind::from_str(&genre)
-        .ok_or_else(|| rusqlite::Error::FromSqlConversionFailure(
+    let kind = TransactionKind::from_str(&genre).ok_or_else(|| {
+        rusqlite::Error::FromSqlConversionFailure(
             1,
             rusqlite::types::Type::Text,
             format!("Récurrence {id} : type inconnu « {genre} ».").into(),
-        ))?;
+        )
+    })?;
 
     let horodatage = |brut: &str| {
         chrono::DateTime::parse_from_rfc3339(brut)

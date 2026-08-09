@@ -57,9 +57,14 @@ impl Money {
         let decimales: i64 = if decimales.is_empty() {
             0
         } else if decimales.len() == 1 {
-            decimales.parse::<i64>().map_err(|_| "Le montant est trop grand.".to_string())? * 10
+            decimales
+                .parse::<i64>()
+                .map_err(|_| "Le montant est trop grand.".to_string())?
+                * 10
         } else {
-            decimales.parse().map_err(|_| "Le montant est trop grand.".to_string())?
+            decimales
+                .parse()
+                .map_err(|_| "Le montant est trop grand.".to_string())?
         };
 
         let centimes = if negatif {
@@ -188,11 +193,15 @@ impl Money {
     }
 
     pub fn checked_add(self, other: Self) -> Option<Self> {
-        self.cents.checked_add(other.cents).map(|cents| Self { cents })
+        self.cents
+            .checked_add(other.cents)
+            .map(|cents| Self { cents })
     }
 
     pub fn checked_sub(self, other: Self) -> Option<Self> {
-        self.cents.checked_sub(other.cents).map(|cents| Self { cents })
+        self.cents
+            .checked_sub(other.cents)
+            .map(|cents| Self { cents })
     }
 
     /// Addition saturée : utilisée uniquement pour des affichages de synthèse.
@@ -279,15 +288,9 @@ mod tests {
     #[test]
     fn les_bornes_i64_encadrent_le_montant() {
         let max = "92233720368547758,07";
-        assert_eq!(
-            Money::from_input(max).unwrap().cents,
-            i64::MAX
-        );
+        assert_eq!(Money::from_input(max).unwrap().cents, i64::MAX);
         let min = "-92233720368547758,08";
-        assert_eq!(
-            Money::from_input(min).unwrap().cents,
-            i64::MIN
-        );
+        assert_eq!(Money::from_input(min).unwrap().cents, i64::MIN);
         assert!(Money::from_input("92233720368547758,08").is_err());
         assert!(Money::from_input("-92233720368547758,09").is_err());
     }
@@ -306,7 +309,10 @@ mod tests {
         let b = Money::from_cents(i64::MIN);
         assert_eq!(b.checked_sub(Money::from_cents(1)), None);
         assert_eq!(b.checked_abs(), None);
-        assert_eq!(Money::from_cents(-5).checked_abs(), Some(Money::from_cents(5)));
+        assert_eq!(
+            Money::from_cents(-5).checked_abs(),
+            Some(Money::from_cents(5))
+        );
     }
 
     /// L'affichage ne doit jamais paniquer, même sur la valeur minimale

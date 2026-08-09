@@ -9,9 +9,8 @@ fn row_to_transaction(row: &TransactionRow) -> Result<Transaction, String> {
     use crate::domaine::argent::Money;
     use crate::domaine::transaction::{TransactionKind, TransactionStatus};
 
-    let kind = TransactionKind::from_str(&row.kind).ok_or_else(|| {
-        format!("Transaction {} : type inconnu « {} ».", row.id, row.kind)
-    })?;
+    let kind = TransactionKind::from_str(&row.kind)
+        .ok_or_else(|| format!("Transaction {} : type inconnu « {} ».", row.id, row.kind))?;
     let transaction_date = chrono::NaiveDate::parse_from_str(&row.transaction_date, "%Y-%m-%d")
         .map_err(|_| {
             format!(
@@ -20,17 +19,15 @@ fn row_to_transaction(row: &TransactionRow) -> Result<Transaction, String> {
             )
         })?;
     let status = TransactionStatus::from_str(&row.status).ok_or_else(|| {
-        format!("Transaction {} : statut inconnu « {} ».", row.id, row.status)
+        format!(
+            "Transaction {} : statut inconnu « {} ».",
+            row.id, row.status
+        )
     })?;
     let parse_horodatage = |brut: &str| {
         chrono::DateTime::parse_from_rfc3339(brut)
             .map(|d| d.with_timezone(&chrono::Utc))
-            .map_err(|_| {
-                format!(
-                    "Transaction {} : horodatage invalide « {} ».",
-                    row.id, brut
-                )
-            })
+            .map_err(|_| format!("Transaction {} : horodatage invalide « {} ».", row.id, brut))
     };
 
     Ok(Transaction {
@@ -366,7 +363,12 @@ pub fn sum_by_kind(pool: &DatabasePool, year: i32, month: u32, kind: &str) -> Re
     result.map_err(|e| format!("Erreur de calcul : {}", e))
 }
 
-pub fn count_by_kind(pool: &DatabasePool, year: i32, month: u32, kind: &str) -> Result<i64, String> {
+pub fn count_by_kind(
+    pool: &DatabasePool,
+    year: i32,
+    month: u32,
+    kind: &str,
+) -> Result<i64, String> {
     let start_date = format!("{:04}-{:02}-01", year, month);
     let end_day = last_day_of_month(year, month);
     let end_date = format!("{:04}-{:02}-{:02}", year, month, end_day);

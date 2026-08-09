@@ -53,7 +53,8 @@ fn appliquer_migration(
     )
     .map_err(|e| format!("Erreur enregistrement migration v{v} : {e}"))?;
 
-    tx.commit().map_err(|e| format!("Erreur commit migration v{v} : {e}"))?;
+    tx.commit()
+        .map_err(|e| format!("Erreur commit migration v{v} : {e}"))?;
     Ok(())
 }
 
@@ -88,8 +89,10 @@ fn migration_v2(tx: &rusqlite::Transaction) -> Result<(), String> {
 
 fn migration_v3(tx: &rusqlite::Transaction) -> Result<(), String> {
     if !colonne_existe(tx, "app_settings", "last_export_date")? {
-        tx.execute_batch(include_str!("../../../migrations/0003_last_export_date.sql"))
-            .map_err(|e| format!("Erreur migration v3 : {}", e))?;
+        tx.execute_batch(include_str!(
+            "../../../migrations/0003_last_export_date.sql"
+        ))
+        .map_err(|e| format!("Erreur migration v3 : {}", e))?;
     }
     Ok(())
 }
@@ -174,9 +177,11 @@ mod tests {
         assert_eq!(tables, 0, "la table partielle doit être annulée");
 
         let version: i64 = conn
-            .query_row("SELECT COALESCE(MAX(version), 0) FROM schema_migrations", [], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(version, 0, "aucune version ne doit être enregistrée");
     }
@@ -201,7 +206,9 @@ mod tests {
             .unwrap();
         assert_eq!(tables, 1);
         let version: i64 = conn
-            .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| r.get(0))
+            .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(version, 1);
     }

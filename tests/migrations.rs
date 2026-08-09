@@ -78,7 +78,9 @@ fn une_base_interrompue_entre_alter_et_version_est_reparable() {
 
     let version: i64 = pool
         .conn
-        .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| r.get(0))
+        .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| {
+            r.get(0)
+        })
         .unwrap();
     assert_eq!(version, migrations::VERSION_COURANTE);
 

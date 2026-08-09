@@ -5,9 +5,8 @@ use crate::core::db::pool::DatabasePool;
 use crate::domaine::categorie::Category;
 
 fn row_to_category(row: &CategoryRow) -> Result<Category, String> {
-    let kind = crate::domaine::transaction::TransactionKind::from_str(&row.kind).ok_or_else(|| {
-        format!("Catégorie {} : type inconnu « {} ».", row.id, row.kind)
-    })?;
+    let kind = crate::domaine::transaction::TransactionKind::from_str(&row.kind)
+        .ok_or_else(|| format!("Catégorie {} : type inconnu « {} ».", row.id, row.kind))?;
     let parse_horodatage = |brut: &str| {
         chrono::DateTime::parse_from_rfc3339(brut)
             .map(|d| d.with_timezone(&chrono::Utc))

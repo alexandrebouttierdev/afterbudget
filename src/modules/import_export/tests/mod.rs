@@ -6,11 +6,13 @@ use crate::modules::import_export::service;
 
 fn ecrire_base_v1(chemin: &std::path::Path) {
     let conn = rusqlite::Connection::open(chemin).unwrap();
-    conn.execute_batch("CREATE TABLE IF NOT EXISTS schema_migrations (
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         applied_at TEXT NOT NULL
-    );")
+    );",
+    )
     .unwrap();
     conn.execute_batch(include_str!("../../../../migrations/0001_initial.sql"))
         .unwrap();
@@ -50,11 +52,17 @@ fn une_base_v1_et_une_base_v2_sont_acceptees() {
 
     let v1 = repertoire.path().join("v1.sqlite");
     ecrire_base_v1(&v1);
-    assert!(service::valider_import(&v1).is_ok(), "v1 doit être acceptée");
+    assert!(
+        service::valider_import(&v1).is_ok(),
+        "v1 doit être acceptée"
+    );
 
     let v2 = repertoire.path().join("v2.sqlite");
     ecrire_base_v2(&v2);
-    assert!(service::valider_import(&v2).is_ok(), "v2 doit être acceptée");
+    assert!(
+        service::valider_import(&v2).is_ok(),
+        "v2 doit être acceptée"
+    );
 }
 
 #[test]
@@ -113,12 +121,14 @@ fn un_import_reussi_remplace_et_un_import_echoue_preserve() {
     }
 
     service::importer_en_arriere_plan(cible.clone(), source.clone()).unwrap();
-    let lue = crate::modules::parametres::repository::get_settings(
-        &DatabasePool::open(&cible).unwrap(),
-    )
-    .unwrap()
-    .unwrap();
-    assert_eq!(lue.current_balance.cents, 22222, "les données importées doivent remplacer");
+    let lue =
+        crate::modules::parametres::repository::get_settings(&DatabasePool::open(&cible).unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(
+        lue.current_balance.cents, 22222,
+        "les données importées doivent remplacer"
+    );
 
     // Échec : source corrompue (fichier tronqué). Le checksum de référence est
     // capturé APRÈS l'import réussi, sur l'état que l'échec ne doit pas toucher.

@@ -180,8 +180,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 return Task::none();
             };
             if let Err(e) = parametres_service::mettre_a_jour_decouvert(db, overdraft) {
-                state.notification =
-                    Some(Notification::erreur(format!("Découvert non enregistré : {e}")));
+                state.notification = Some(Notification::erreur(format!(
+                    "Découvert non enregistré : {e}"
+                )));
                 return Task::none();
             }
             state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
@@ -204,8 +205,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 return Task::none();
             };
             if let Err(e) = parametres_service::mettre_a_jour_devise(db, &cur) {
-                state.notification =
-                    Some(Notification::erreur(format!("Devise non enregistrée : {e}")));
+                state.notification = Some(Notification::erreur(format!(
+                    "Devise non enregistrée : {e}"
+                )));
                 return Task::none();
             }
             state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
@@ -537,8 +539,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             };
 
             if let Err(e) = tx_cmd::supprimer(db, &tx.id) {
-                state.notification =
-                    Some(Notification::erreur(format!("Suppression impossible : {e}")));
+                state.notification = Some(Notification::erreur(format!(
+                    "Suppression impossible : {e}"
+                )));
                 return Task::none();
             }
             state.delete_transaction = None;
@@ -697,9 +700,11 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                     state.db = Some(pool);
                     match state.load_data() {
                         Ok(()) => state.notification = Some(Notification::succes("Import réussi.")),
-                        Err(e) => state.notification = Some(Notification::erreur(format!(
-                            "Import effectué, mais rechargement impossible : {e}"
-                        ))),
+                        Err(e) => {
+                            state.notification = Some(Notification::erreur(format!(
+                                "Import effectué, mais rechargement impossible : {e}"
+                            )))
+                        }
                     }
                 }
                 (Ok(()), Err(e)) => {
@@ -860,8 +865,7 @@ fn appliquer_theme(state: &mut AppState, mode: ThemeMode) -> Task<Message> {
         return Task::none();
     };
     if let Err(e) = parametres_service::mettre_a_jour_theme(db, mode.cle()) {
-        state.notification =
-            Some(Notification::erreur(format!("Thème non enregistré : {e}")));
+        state.notification = Some(Notification::erreur(format!("Thème non enregistré : {e}")));
     } else {
         state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
     }
