@@ -14,8 +14,6 @@ categories = ["gui", "finance"]
 
 [package.metadata.deb]
 maintainer = "AfterBudget <alexandrebouttierdev@users.noreply.github.com>"
-description = "Application desktop de gestion de budget personnel"
-homepage = "https://github.com/alexandrebouttierdev/afterbudget"
 section = "utils"
 priority = "optional"
 assets = [
@@ -27,13 +25,12 @@ assets = [
 [package.metadata.generate-rpm]
 name = "afterbudget"
 summary = "Application desktop de gestion de budget personnel"
-description = "Application desktop de gestion de budget personnel"
 license = "MIT"
 url = "https://github.com/alexandrebouttierdev/afterbudget"
 assets = [
-  { from = "target/release/afterbudget", to = "/usr/bin/", mode = "755" },
-  { from = "packaging/afterbudget.desktop", to = "/usr/share/applications/", mode = "644" },
-  { from = "packaging/afterbudget.png", to = "/usr/share/icons/hicolor/256x256/apps/afterbudget.png", mode = "644" },
+  { source = "target/release/afterbudget", dest = "/usr/bin/afterbudget", mode = "755" },
+  { source = "packaging/afterbudget.desktop", dest = "/usr/share/applications/afterbudget.desktop", mode = "644" },
+  { source = "packaging/afterbudget.png", dest = "/usr/share/icons/hicolor/256x256/apps/afterbudget.png", mode = "644" },
 ]
 
 [dependencies]
