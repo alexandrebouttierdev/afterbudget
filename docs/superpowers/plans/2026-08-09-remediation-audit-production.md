@@ -542,7 +542,7 @@ Remplacer `pub fn compute(` (bloc lignes 52-88) par :
     }
 ```
 
-Dans le même fichier, remplacer les trois helpers (lignes 98-118) :
+Dans le même fichier, remplacer les trois helpers (lignes 98-118) — **avec négations saturées** (`saturating_neg`), car un solde `i64::MIN` est atteignable via `from_input` et `-i64::MIN` panique :
 
 ```rust
     pub fn decouvert_restant(&self) -> Money {
@@ -561,7 +561,10 @@ Dans le même fichier, remplacer les trois helpers (lignes 98-118) :
     pub fn decouvert_utilise(&self) -> Money {
         if self.projected_balance.is_negative() {
             Money::from_cents(
-                (-self.projected_balance.cents).min(self.overdraft_limit.cents),
+                self.projected_balance
+                    .cents
+                    .saturating_neg()
+                    .min(self.overdraft_limit.cents),
             )
         } else {
             Money::ZERO
@@ -569,8 +572,23 @@ Dans le même fichier, remplacer les trois helpers (lignes 98-118) :
     }
 
     pub fn depassement_du_decouvert(&self) -> Money {
-        Money::from_cents((-self.remaining_overdraft_margin.cents).max(0))
+        Money::from_cents(
+            self.remaining_overdraft_margin
+                .cents
+                .saturating_neg()
+                .max(0),
+        )
     }
+```
+
+Et dans `compute`, la comparaison du statut financier utilise aussi une négation saturée :
+
+```rust
+        } else if projected_balance >= Money::from_cents(overdraft_limit.cents.saturating_neg()) {
+            FinancialStatus::Warning
+        } else {
+            FinancialStatus::Danger
+        };
 ```
 
 - [ ] **Step 7: `budget.rs` module tests — adapter aux nouvelles signatures**
