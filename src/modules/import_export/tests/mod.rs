@@ -139,3 +139,130 @@ fn un_import_reussi_remplace_et_un_import_echoue_preserve() {
     let apres = somme_checksum(&cible);
     assert_eq!(avant, apres, "la base d'origine doit rester intacte");
 }
+
+/// Un import dont la migration échoue APRÈS le remplacement du fichier doit
+/// restaurer la base d'origine, fichier et données compris (AB-003).
+///
+/// La source est « piégée » : elle passe la validation (v1 : la table
+/// recurring_rules n'est pas requise) mais sa table recurring_rules ne possède
+/// pas la colonne `is_active`, ce qui fait échouer la migration v2 (index
+/// `idx_recurring_active`) une fois le fichier remplacé.
+#[test]
+fn un_import_dont_la_migration_echoue_restaure_la_base() {
+    let repertoire = tempfile::tempdir().unwrap();
+
+    // Base courante avec une valeur marquante.
+    let cible = repertoire.path().join("cible.sqlite");
+    {
+        let pool = DatabasePool::open(&cible).unwrap();
+        migrations::run_migrations(&pool.conn).unwrap();
+        let parametres = crate::domaine::parametres::AppSettings {
+            current_balance: crate::domaine::argent::Money::from_cents(11111),
+            ..Default::default()
+        };
+        crate::modules::parametres::repository::insert_settings(&pool, &parametres).unwrap();
+    }
+
+    // Source v1 piégée : recurring_rules sans is_active.
+    let piegee = repertoire.path().join("piegee.sqlite");
+    ecrire_base_v1(&piegee);
+    {
+        let conn = rusqlite::Connection::open(&piegee).unwrap();
+        conn.execute_batch("CREATE TABLE recurring_rules (id TEXT PRIMARY KEY);")
+            .unwrap();
+    }
+
+    assert!(
+        service::valider_import(&piegee).is_ok(),
+        "la source piégée doit passer la validation"
+    );
+    let erreur = service::importer_en_arriere_plan(cible.clone(), piegee).unwrap_err();
+    assert!(
+        erreur.contains("restaurées"),
+        "le message doit annoncer la restauration : {erreur}"
+    );
+
+    // La sauvegarde pré-import reste sur disque et est la source exacte de la
+    // restauration : le fichier restauré doit en être une copie octet pour
+    // octet. (Un snapshot SQLite n'est pas une copie octet pour octet du
+    // fichier principal d'origine — compteur de changement de l'en-tête,
+    // page de freelist — c'est donc lui la référence de fidélité.)
+    let sauvegardes: Vec<_> = std::fs::read_dir(repertoire.path())
+        .unwrap()
+        .filter_map(|entree| entree.ok())
+        .filter(|entree| {
+            entree
+                .file_name()
+                .to_string_lossy()
+                .starts_with("afterbudget-pre-import-")
+        })
+        .collect();
+    assert_eq!(sauvegardes.len(), 1, "une seule sauvegarde doit subsister");
+    let sauvegarde = sauvegardes[0].path();
+
+    let apres = somme_checksum(&cible);
+    assert_eq!(
+        somme_checksum(&sauvegarde),
+        apres,
+        "le fichier restauré doit être la copie exacte de la sauvegarde"
+    );
+
+    // La base restaurée doit rester saine et relire les données d'origine.
+    DatabasePool::verifier_integrite(&cible).expect("base restaurée saine");
+    let relue =
+        crate::modules::parametres::repository::get_settings(&DatabasePool::open(&cible).unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(
+        relue.current_balance.cents, 11111,
+        "les données doivent rester intactes"
+    );
+}
+
+/// L'export produit par le binaire courant se réimporte dans une autre base :
+/// la valeur marquante doit survivre au cycle export → import (AB-002).
+#[test]
+fn un_export_du_binaire_courant_se_reimporte() {
+    let repertoire = tempfile::tempdir().unwrap();
+
+    // Base A : source de l'export, avec une valeur marquante.
+    let source = repertoire.path().join("source.sqlite");
+    {
+        let pool = DatabasePool::open(&source).unwrap();
+        migrations::run_migrations(&pool.conn).unwrap();
+        let parametres = crate::domaine::parametres::AppSettings {
+            current_balance: crate::domaine::argent::Money::from_cents(424242),
+            ..Default::default()
+        };
+        crate::modules::parametres::repository::insert_settings(&pool, &parametres).unwrap();
+    }
+
+    let exporte = repertoire.path().join("export.sqlite");
+    {
+        let pool = DatabasePool::open(&source).unwrap();
+        service::exporter(&pool, &exporte).unwrap();
+    }
+
+    // Base B : cible de l'import.
+    let cible = repertoire.path().join("cible.sqlite");
+    {
+        let pool = DatabasePool::open(&cible).unwrap();
+        migrations::run_migrations(&pool.conn).unwrap();
+        let parametres = crate::domaine::parametres::AppSettings {
+            current_balance: crate::domaine::argent::Money::from_cents(1),
+            ..Default::default()
+        };
+        crate::modules::parametres::repository::insert_settings(&pool, &parametres).unwrap();
+    }
+
+    service::importer_en_arriere_plan(cible.clone(), exporte).unwrap();
+
+    let relue =
+        crate::modules::parametres::repository::get_settings(&DatabasePool::open(&cible).unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(
+        relue.current_balance.cents, 424242,
+        "la valeur marquante doit survivre au cycle export → import"
+    );
+}

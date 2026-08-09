@@ -169,5 +169,9 @@ fn une_regle_corrompue_fait_echouer_le_listage() {
             [],
         )
         .unwrap();
-    assert!(commandes::lister(&pool).is_err());
+    let erreur = commandes::lister(&pool).unwrap_err();
+    assert!(
+        erreur.contains("regle-corrompue"),
+        "le message doit désigner la règle fautive : {erreur}"
+    );
 }

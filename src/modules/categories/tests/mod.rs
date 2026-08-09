@@ -45,6 +45,14 @@ fn une_categorie_invalide_fait_echouer_le_chargement() {
             [],
         )
         .unwrap();
-    assert!(repo::find_all_active(&pool).is_err());
-    assert!(repo::find_by_id(&pool, "cat-corrompue").is_err());
+    let erreur = repo::find_all_active(&pool).unwrap_err();
+    assert!(
+        erreur.contains("cat-corrompue"),
+        "le message doit désigner la catégorie fautive : {erreur}"
+    );
+    let erreur = repo::find_by_id(&pool, "cat-corrompue").unwrap_err();
+    assert!(
+        erreur.contains("cat-corrompue"),
+        "le message doit désigner la catégorie fautive : {erreur}"
+    );
 }
