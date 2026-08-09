@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AfterBudget — Ce qu'il te restera à la fin du mois</title>
+  <meta name="description" content="AfterBudget est une application de gestion de budget personnel, 100 % locale et native. Solde prévisionnel de fin de mois, opérations récurrentes, statistiques : tes données ne quittent jamais ton ordinateur.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+<symbol id="i-accueil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.6 12 3.6l8.5 7"/><path d="M5.8 9.6V19a1.4 1.4 0 0 0 1.4 1.4h9.6A1.4 1.4 0 0 0 18.2 19V9.6"/><path d="M9.6 20.4v-5.6h4.8v5.6"/></symbol>
+<symbol id="i-alerte" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8 21 19.6H3z"/><path d="M12 9.8v4.2"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-bouclier" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 20 6v6.2c0 4.4-3.2 7.4-8 8.6-4.8-1.2-8-4.2-8-8.6V6z"/></symbol>
+<symbol id="i-cadenas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4.8" y="10.2" width="14.4" height="10" rx="2"/><path d="M8.2 10.2V7.4a3.8 3.8 0 0 1 7.6 0v2.8"/></symbol>
+<symbol id="i-carte-bancaire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.2"/><path d="M2.8 10h18.4"/><path d="M6.4 14.6h3.2"/></symbol>
+<symbol id="i-chevron-bas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 9.2 12 15.8l6.6-6.6"/></symbol>
+<symbol id="i-chevron-droit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4.8 16.4 12l-7.2 7.2"/></symbol>
+<symbol id="i-coche" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4 9.8 17.4 19.2 6.8"/></symbol>
+<symbol id="i-cycle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 12a8.2 8.2 0 0 1-14 5.8"/><path d="M3.8 12a8.2 8.2 0 0 1 14-5.8"/><path d="M17.8 2.6v3.8h-3.8M6.2 21.4v-3.8H10"/></symbol>
+<symbol id="i-eclair" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 3.2 5.6 13.6h5.2l-1.2 7.2 8-10.4h-5.4z"/></symbol>
+<symbol id="i-etincelles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.4 11.8 8.2 16.6 10 11.8 11.8 10 16.6 8.2 11.8 3.4 10 8.2 8.2z"/><path d="M17.6 14.2 18.6 16.8 21.2 17.8 18.6 18.8 17.6 21.4 16.6 18.8 14 17.8 16.6 16.8z"/></symbol>
+<symbol id="i-etiquette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4H4v7l10 10 7-7z"/><circle cx="7.6" cy="7.6" r="1.2" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.4V4.8"/><path d="M8.2 8.6 12 4.8l3.8 3.8"/><path d="M4.2 16.4v2.6a1.4 1.4 0 0 0 1.4 1.4h12.8a1.4 1.4 0 0 0 1.4-1.4v-2.6"/></symbol>
+<symbol id="i-fleche-entrante" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.4v13.2"/><path d="M6.6 12.2 12 17.6l5.4-5.4"/><path d="M4.6 20.6h14.8"/></symbol>
+<symbol id="i-fleche-sortante" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19.6V6.4"/><path d="M6.6 11.8 12 6.4l5.4 5.4"/><path d="M4.6 20.6h14.8"/></symbol>
+<symbol id="i-import" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8v10.6"/><path d="M8.2 10.8 12 14.6l3.8-3.8"/><path d="M4.2 16.4v2.6a1.4 1.4 0 0 0 1.4 1.4h12.8a1.4 1.4 0 0 0 1.4-1.4v-2.6"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 11.2v5.4"/><circle cx="12" cy="7.8" r=".9" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-lune" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8z"/></symbol>
+<symbol id="i-os-apple" viewBox="0 0 24 24" fill="currentColor"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></symbol>
+<symbol id="i-os-github" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+<symbol id="i-os-linux" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.9-.99 2.588-.09.092-.135.224-.121.357.013.133.084.25.193.326.116.082.256.131.403.131 1.127.018 2.115.335 2.9.93h.002c1.51 1.143 2.703 3.185 2.703 6.034 0 2.31-1.274 3.962-3.08 4.79v.864c0 .159-.128.287-.287.287h-.483a.287.287 0 0 1-.287-.287v-.877h-2.623v.877a.287.287 0 0 1-.287.287h-.483a.287.287 0 0 1-.287-.287v-.864c-1.804-.828-3.078-2.48-3.078-4.79 0-2.849 1.194-4.89 2.703-6.034.785-.594 1.773-.912 2.9-.93.147 0 .288-.049.404-.13a.41.41 0 0 0 .193-.327.408.408 0 0 0-.121-.357c-.69-.688-.915-1.496-.991-2.588-.064-1.491 1.056-5.965-3.169-6.298A3.236 3.236 0 0 0 12.504 0Zm-.428 2.204c.236 0 .47.026.696.075-1.048 2.81 1.415 4.373 1.79 5.54.228.712.29 1.476.148 2.196-.453 2.296-2.326 3.777-4.673 3.624-2.337-.153-4.113-1.848-4.367-4.166-.13-1.19.15-2.42.773-3.492 1.102 1.026 3.132 1.451 5.214 1.53a3.878 3.878 0 0 0 .419-5.307Z"/></symbol>
+<symbol id="i-os-windows" viewBox="0 0 24 24" fill="currentColor"><path d="M0,0H11.377V11.372H0ZM12.623,0H24V11.372H12.623ZM0,12.623H11.377V24H0Zm12.623,0H24V24H12.623"/></symbol>
+<symbol id="i-parametres" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 7.2h8.2M17.6 7.2h2.8"/><path d="M3.6 16.8h2.8M11.8 16.8h8.6"/><circle cx="14.7" cy="7.2" r="2.6"/><circle cx="9.3" cy="16.8" r="2.6"/></symbol>
+<symbol id="i-portefeuille" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.6" width="18" height="13.6" rx="2.4"/><path d="M15.6 11.4H21v4.2h-5.4a2.1 2.1 0 0 1 0-4.2z"/></symbol>
+<symbol id="i-sablier" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.8h10M7 20.2h10"/><path d="M8.2 3.8c0 4 3.8 5 3.8 8.2s-3.8 4.2-3.8 8.2"/><path d="M15.8 3.8c0 4-3.8 5-3.8 8.2s3.8 4.2 3.8 8.2"/></symbol>
+<symbol id="i-soleil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></symbol>
+<symbol id="i-statistiques" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 20.4h16.8"/><path d="M7.2 20.4v-5.6"/><path d="M12 20.4V7.6"/><path d="M16.8 20.4v-8.8"/></symbol>
+<symbol id="i-transactions" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 6.4h9.6M3.6 12h9.6M3.6 17.6h6"/><path d="M18 4.8v14.4"/><path d="M15 16.2 18 19.2l3-3"/></symbol>
+</svg>
+  <a class="passe_lecteur" href="#contenu">Aller au contenu</a>
+
+  <header class="entete" id="haut">
+    <div class="conteneur barre">
+      <a class="marque" href="#haut" aria-label="AfterBudget — retour en haut">
+        <span class="pastille_marque">
+          <svg aria-hidden="true"><use href="#i-portefeuille"></use></svg>
+        </span>
+        <span class="nom_marque">AfterBudget</span>
+      </a>
+      <nav class="navigation" aria-label="Navigation principale">
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#captures">Captures</a>
+        <a href="#avantages">Avantages</a>
+        <a href="#telechargement">Téléchargement</a>
+        <a class="lien_github" href="https://github.com/alexandrebouttierdev/afterbudget" target="_blank" rel="noopener">
+          <svg class="icone_github" aria-hidden="true"><use href="#i-os-github"></use></svg>
+          GitHub
+        </a>
+      </nav>
+      <a class="bouton bouton_principal bouton_compact" href="#telechargement">Télécharger</a>
+    </div>
+  </header>
+
+  <main id="contenu">
+
+    <!-- ── Héros ─────────────────────────────────────────────────────── -->
+    <section class="hero">
+      <div class="conteneur">
+        <div class="hero_texte">
+          <p class="sur_titre">Gestion de budget personnel · 100 % local</p>
+          <h1>Ce qu'il te restera à la fin du mois,<br><em>à tout moment.</em></h1>
+          <p class="sous_titre">
+            Tu saisis ce qui est déjà sur ton compte et ce qui doit encore arriver.
+            AfterBudget te montre aussitôt le montant réellement disponible à la fin
+            du mois. Tes données restent sur ton ordinateur.
+          </p>
+          <div class="actions_hero">
+            <a class="bouton bouton_principal" href="#telechargement">Télécharger pour ton système</a>
+            <a class="bouton bouton_secondaire" href="#captures">Voir les captures</a>
+          </div>
+          <ul class="confiance" aria-label="Points clés">
+            <li><span class="puce"></span>100&nbsp;% local</li>
+            <li><span class="puce"></span>Application native Rust</li>
+            <li><span class="puce"></span>Gratuit et open source</li>
+          </ul>
+          <div class="preuve_hero" aria-label="Résumé de la démonstration">
+            <span class="preuve_pastille"><svg aria-hidden="true"><use href="#i-eclair"></use></svg></span>
+            <span><strong>Le chiffre important, tout de suite</strong><br>
+              <small>Le solde prévu change dès que tu modifies une opération.</small></span>
+          </div>
+        </div>
+
+        <figure class="capture_hero">
+          <div class="cadre_capture">
+            <img src="assets/screenshots/dashboard.png" alt="Tableau de bord AfterBudget : solde prévisionnel de fin de mois à −250,00 €, statut Attention, jauge de découvert, derniers mouvements et récapitulatif du mois."
+                 width="1240" height="780" loading="eager">
+            <figcaption>Accueil · solde prévisionnel, statut et jauge de découvert</figcaption>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ── La formule ────────────────────────────────────────────────── -->
+    <section class="formule_section" aria-label="La formule d'AfterBudget">
+      <div class="conteneur">
+        <div class="formule" role="img" aria-label="Solde actuel plus revenus à venir moins dépenses à venir égale solde prévisionnel de fin de mois">
+          <span class="terme">
+            <span class="terme_nom">Solde actuel</span>
+            <span class="terme_valeur">846,32&nbsp;€</span>
+          </span>
+          <span class="signe" aria-hidden="true">+</span>
+          <span class="terme">
+            <span class="terme_nom">À recevoir</span>
+            <span class="terme_valeur positif">2&nbsp;530,00&nbsp;€</span>
+          </span>
+          <span class="signe" aria-hidden="true">−</span>
+          <span class="terme">
+            <span class="terme_nom">À payer</span>
+            <span class="terme_valeur negatif">2&nbsp;510,10&nbsp;€</span>
+          </span>
+          <span class="signe egal" aria-hidden="true">=</span>
+          <span class="terme terme_resultat">
+            <span class="terme_nom">Fin de mois prévu</span>
+            <span class="terme_valeur en_alerte">−250,00&nbsp;€</span>
+          </span>
+        </div>
+        <p class="formule_note">
+          Une opération ajoutée, réglée ou supprimée modifie immédiatement le résultat.
+          Pas besoin d'attendre la fin du mois pour voir venir le problème.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── Fonctionnalités ───────────────────────────────────────────── -->
+    <section class="section" id="fonctionnalites">
+      <div class="conteneur">
+        <h2 class="titre_section">Tout ce qu'il faut pour suivre son compte</h2>
+        <p class="sous_titre_section">Un écran d'accueil lisible, des opérations détaillées et les bons repères
+          pour savoir où tu en es sans passer ta soirée dans un tableur.</p>
+
+        <div class="grille_fonctionnalites">
+          <article class="carte_fonction">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-eclair"></use></svg></span>
+            <h3>Solde prévisionnel</h3>
+            <p>Le solde actuel, les revenus attendus et les dépenses prévues sont réunis au même endroit. Un statut te signale simplement quand il faut regarder de plus près.</p>
+          </article>
+          <article class="carte_fonction">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-cycle"></use></svg></span>
+            <h3>Opérations récurrentes</h3>
+            <p>Pour le loyer, le salaire ou un abonnement, tu définis une règle. L'opération est ajoutée au début du mois et reste modifiable.</p>
+          </article>
+          <article class="carte_fonction">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-etiquette"></use></svg></span>
+            <h3>Catégories et statuts</h3>
+            <p>Les catégories et les statuts rendent la liste facile à relire. Une opération est clairement indiquée comme réalisée ou en attente.</p>
+          </article>
+          <article class="carte_fonction">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-statistiques"></use></svg></span>
+            <h3>Statistiques mensuelles</h3>
+            <p>Compare le mois en cours au précédent, regarde ce qui est déjà payé et retrouve les postes qui pèsent le plus dans ton budget.</p>
+          </article>
+          <article class="carte_fonction">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-bouclier"></use></svg></span>
+            <h3>Découvert autorisé</h3>
+            <p>Indique le découvert que ta banque autorise. L'application affiche la marge restante et te prévient si tu risques de la dépasser.</p>
+          </article>
+          <article class="carte_fonction">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-cadenas"></use></svg></span>
+            <h3>100&nbsp;% local</h3>
+            <p>Pas de compte et pas de serveur. La base reste dans un fichier sur ta machine, que tu peux sauvegarder ou déplacer.</p>
+          </article>
+        </div>
+        <div class="bandeau_confiance">
+          <span><strong>8 mois</strong><small>de visibilité</small></span>
+          <span><strong>35 catégories</strong><small>prêtes à l'emploi</small></span>
+          <span><strong>0 compte</strong><small>à créer</small></span>
+          <span><strong>1 fichier</strong><small>qui t'appartient</small></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Captures ──────────────────────────────────────────────────── -->
+    <section class="section section_captures" id="captures">
+      <div class="conteneur">
+        <h2 class="titre_section">Voir l'application</h2>
+        <p class="sous_titre_section">Ces écrans viennent de l'application native et utilisent une base de démonstration remplie de fausses opérations.</p>
+
+        <article class="bloc_capture">
+          <div class="texte_capture">
+            <h3>Ton tableau de bord</h3>
+            <p>Le solde prévisionnel est la seule donnée hors échelle de l'écran.
+              En dessous, ce qui reste à encaisser et à payer, la jauge de découvert,
+              les derniers mouvements et le récapitulatif du mois.</p>
+            <p>Le statut s'affiche avec son libellé et son icône&nbsp;: ici
+              «&nbsp;Attention&nbsp;», avec la marge de découvert encore disponible.</p>
+          </div>
+          <figure class="cadre_capture">
+            <img src="assets/screenshots/dashboard.png" alt="Tableau de bord AfterBudget"
+                 width="1240" height="780" loading="lazy">
+            <figcaption>Accueil</figcaption>
+          </figure>
+        </article>
+
+        <article class="bloc_capture inverse">
+          <div class="texte_capture">
+            <h3>Tout ton mois, au même endroit</h3>
+            <p>Une table claire, groupée par jour et pensée pour parcourir rapidement
+              tes opérations. Les filtres isolent en un instant les revenus, les
+              dépenses, les statuts ou les catégories.</p>
+            <p>Le total affiché se met à jour avec la sélection. Chaque ligne donne
+              le libellé, la catégorie, la date, le statut et le montant.</p>
+          </div>
+          <figure class="cadre_capture">
+            <img src="assets/screenshots/transactions.png" alt="Écran Transactions : liste du mois, filtres et totaux"
+                 width="1240" height="780" loading="lazy">
+            <figcaption>Transactions</figcaption>
+          </figure>
+        </article>
+
+        <article class="bloc_capture">
+          <div class="texte_capture">
+            <h3>Comprendre où part l'argent</h3>
+            <p>Le mois est comparé au précédent, avec l'avancement des revenus et des dépenses. Les graphiques sont accompagnés de leurs montants et de leur légende.</p>
+          </div>
+          <figure class="cadre_capture">
+            <img src="assets/screenshots/statistics.png" alt="Écran Statistiques : comparaison mensuelle, avancement et répartition par catégorie"
+                 width="1240" height="780" loading="lazy">
+            <figcaption>Statistiques</figcaption>
+          </figure>
+        </article>
+
+        <article class="bloc_capture inverse">
+          <div class="texte_capture">
+            <h3>Des réglages qui restent simples</h3>
+            <p>Solde, découvert, devise, apparence et opérations récurrentes sont regroupés au même endroit. Tu peux aussi exporter ou importer ta base.</p>
+          </div>
+          <figure class="cadre_capture">
+            <img src="assets/screenshots/settings.png" alt="Écran Paramètres : budget, apparence, opérations récurrentes, données locales"
+                 width="1240" height="780" loading="lazy">
+            <figcaption>Paramètres</figcaption>
+          </figure>
+        </article>
+
+        <div class="capture_unique">
+          <article class="bloc_capture">
+            <div class="texte_capture">
+              <h3>Ajouter une opération simplement</h3>
+            <p>Le formulaire reste lisible et va droit au but&nbsp;: montant, libellé,
+              date, statut et catégorie. Chaque champ est contrôlé avant
+              l'enregistrement.</p>
+            </div>
+            <figure class="cadre_capture">
+              <img src="assets/screenshots/form.png" alt="Formulaire de nouvelle dépense"
+                   width="1240" height="780" loading="lazy">
+              <figcaption>Nouvelle dépense</figcaption>
+            </figure>
+          </article>
+          <article class="bloc_capture">
+            <div class="texte_capture">
+              <h3>Le dashboard en thème sombre</h3>
+              <p>Le même aperçu, avec une interface sombre plus confortable le soir. Le solde prévu, les mouvements et les catégories restent immédiatement lisibles.</p>
+            </div>
+            <figure class="cadre_capture">
+              <img src="assets/screenshots/dashboard-dark.png" alt="Tableau de bord AfterBudget en thème sombre"
+                   width="1240" height="780" loading="lazy">
+              <figcaption>Accueil · thème sombre</figcaption>
+            </figure>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Avantages ─────────────────────────────────────────────────── -->
+    <section class="section section_avantages" id="avantages">
+      <div class="conteneur">
+        <h2 class="titre_section">Pourquoi AfterBudget</h2>
+        <div class="liste_avantages">
+          <div class="avantage">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-cadenas"></use></svg></span>
+            <div>
+              <h3>Tes comptes restent privés</h3>
+              <p>Pas de compte, pas de publicité et pas de synchronisation imposée. Le fichier de données reste chez toi.</p>
+            </div>
+          </div>
+          <div class="avantage">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-eclair"></use></svg></span>
+            <div>
+              <h3>Une application de bureau</h3>
+              <p>AfterBudget est une application native écrite en Rust. Elle fonctionne localement, sans page web ouverte en permanence.</p>
+            </div>
+          </div>
+          <div class="avantage">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-etincelles"></use></svg></span>
+            <div>
+              <h3>Conçue pour être utilisée</h3>
+              <p>Contrastes validés WCAG AA, libellés explicites et informations
+                toujours accompagnées d'un texte&nbsp;: jamais la couleur seule pour
+                porter un sens.</p>
+            </div>
+          </div>
+          <div class="avantage">
+            <span class="icone_fonction"><svg aria-hidden="true"><use href="#i-export"></use></svg></span>
+            <div>
+              <h3>Une sauvegarde facile</h3>
+              <p>La base SQLite peut être exportée et importée pour faire une sauvegarde ou changer d'ordinateur.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Téléchargement ────────────────────────────────────────────── -->
+    <section class="section section_telechargement" id="telechargement">
+      <div class="conteneur">
+        <h2 class="titre_section">Télécharger AfterBudget</h2>
+        <p class="sous_titre_section">Choisis ton système et télécharge la dernière version publiée. Le code source et les versions sont disponibles sur GitHub.</p>
+
+        <div class="grille_telechargement" id="grille_telechargement">
+
+          <article class="carte_plateforme" data-os="windows">
+            <div class="entete_plateforme">
+              <span class="icone_plateforme"><svg aria-hidden="true"><use href="#i-os-windows"></use></svg></span>
+              <h3>Windows</h3>
+            </div>
+            <p class="description_plateforme">Pour Windows 10 et 11.</p>
+            <a class="bouton bouton_principal" href="https://github.com/alexandrebouttierdev/afterbudget/releases/latest/download/afterbudget-windows-latest.exe" download>
+              Télécharger pour Windows
+            </a>
+            <p class="detail_plateforme">afterbudget-windows-latest.exe</p>
+          </article>
+
+          <article class="carte_plateforme" data-os="macos">
+            <div class="entete_plateforme">
+              <span class="icone_plateforme"><svg aria-hidden="true"><use href="#i-os-apple"></use></svg></span>
+              <h3>macOS</h3>
+            </div>
+            <p class="description_plateforme">Une version pour les Mac Apple Silicon et Intel.</p>
+            <a class="bouton bouton_principal" href="https://github.com/alexandrebouttierdev/afterbudget/releases/latest/download/afterbudget-macos-latest.dmg" download>
+              Télécharger pour macOS
+            </a>
+            <p class="detail_plateforme">afterbudget-macos-latest.dmg · universel</p>
+          </article>
+
+          <article class="carte_plateforme" data-os="linux">
+            <div class="entete_plateforme">
+              <span class="icone_plateforme" aria-label="Linux">
+                <svg aria-hidden="true"><use href="#i-os-linux"></use></svg>
+              </span>
+              <h3>Linux</h3>
+            </div>
+            <p class="description_plateforme">Choisis le format adapté à ta distribution.</p>
+            <div class="menu_linux" id="menu_linux">
+              <button class="bouton bouton_principal bouton_menu_linux" type="button"
+                      aria-expanded="false" aria-controls="sous_menu_linux">
+                <span>Télécharger pour Linux</span>
+                <svg class="chevron" aria-hidden="true"><use href="#i-chevron-bas"></use></svg>
+              </button>
+              <div class="sous_menu" id="sous_menu_linux" hidden>
+                <div class="groupe_paquet">
+                  <p class="titre_paquet">Ubuntu · Debian</p>
+                  <a href="https://github.com/alexandrebouttierdev/afterbudget/releases/latest/download/afterbudget-ubuntu-latest.deb" download>
+                    Télécharger le paquet .deb
+                  </a>
+                  <a href="https://github.com/alexandrebouttierdev/afterbudget/releases/latest/download/afterbudget-ubuntu-latest.AppImage" download>
+                    Télécharger l'AppImage
+                  </a>
+                </div>
+                <div class="groupe_paquet">
+                  <p class="titre_paquet">Fedora · RHEL</p>
+                  <a href="https://github.com/alexandrebouttierdev/afterbudget/releases/latest/download/afterbudget-fedora-latest.rpm" download>
+                    Télécharger le paquet .rpm
+                  </a>
+                </div>
+              </div>
+            </div>
+            <p class="detail_plateforme">.deb · .AppImage · .rpm</p>
+          </article>
+
+        </div>
+
+        <p class="note_telechargement">
+          L'application est gratuite et open source (licence MIT).
+          Le code source est sur <a href="https://github.com/alexandrebouttierdev/afterbudget" target="_blank" rel="noopener">GitHub</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pied">
+    <div class="conteneur">
+      <div class="pied_marque">
+        <a class="marque" href="#haut">
+          <span class="pastille_marque">
+            <svg aria-hidden="true"><use href="#i-portefeuille"></use></svg>
+          </span>
+          <span class="nom_marque">AfterBudget</span>
+        </a>
+        <p>Un suivi simple de ce qu'il te reste à la fin du mois.</p>
+      </div>
+      <nav class="pied_liens" aria-label="Liens du pied de page">
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#captures">Captures</a>
+        <a href="#telechargement">Téléchargement</a>
+        <a href="https://github.com/alexandrebouttierdev/afterbudget" target="_blank" rel="noopener">Dépôt GitHub</a>
+        <a href="https://github.com/alexandrebouttierdev/afterbudget/blob/master/README.md" target="_blank" rel="noopener">Documentation</a>
+      </nav>
+      <p class="pied_copyright">© 2026 AfterBudget · Licence MIT · Données 100&nbsp;% locales<br>
+        <span class="pied_credit">Réalisé par <a href="https://www.alexandrebouttier.fr" target="_blank" rel="noopener">Alexandre Bouttier</a></span></p>
+    </div>
+  </footer>
+
+  <!-- Visionneuse plein écran (zoom au clic sur les captures) -->
+  <div class="visionneuse" id="visionneuse" hidden role="dialog" aria-modal="true" aria-label="Capture en plein écran">
+    <button class="visionneuse_fermer" type="button" aria-label="Fermer">×</button>
+    <img src="" alt="">
+  </div>
+
+  <script src="assets/script.js" defer></script>
+</body>
+</html>

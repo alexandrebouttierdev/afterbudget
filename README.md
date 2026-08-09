@@ -59,6 +59,34 @@ cargo test --all-targets --all-features
 | macOS | `~/Library/Application Support/afterbudget/` |
 | Windows | `%APPDATA%/afterbudget/` |
 
+## Démonstration et captures d'écran
+
+Une base SQLite de démonstration, remplie de **fausses données réalistes**
+(carnet fictif utilisé de janvier à août 2026, compte en fin de mois dans le
+découvert autorisé), est générée par un script : aucune donnée réelle n'est
+jamais lue ni modifiée.
+
+```bash
+# Recrée la base de démonstration (fichiers dans demo/, ignorés par git)
+scripts/seed_demo_db.sh
+
+# Variante « premier lancement » (écran de bienvenue)
+scripts/seed_demo_db.sh --onboarding
+
+# Lance l'application avec la base de démonstration
+scripts/demo.sh
+scripts/demo.sh --onboarding
+```
+
+Le générateur est `src/bin/seed_demo.rs` : il réutilise les migrations et le
+schéma réels de l'application (`cargo run --bin seed_demo [chemin] [--onboarding]`).
+L'application pointe vers la base de démonstration via `XDG_DATA_HOME`
+(position par défaut : `demo/afterbudget/afterbudget.sqlite`).
+
+Pour les captures du site (`docs/assets/screenshots/`) : fenêtre par défaut
+1240 × 780, thème clair, navigation au clavier (`Ctrl 1`…`4`, `Ctrl N`), puis
+enregistrer les PNG sous les noms attendus (voir `docs/assets/screenshots/README.md`).
+
 ## Documentation
 
 La documentation détaillée est rassemblée dans [`docs/`](docs/) :

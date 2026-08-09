@@ -1,3 +1,6 @@
 /target
 /AUDIT_APP_REPORT.md
 .claude
+
+# Base SQLite de démonstration (générée par scripts/seed_demo_db.sh)
+/demo
