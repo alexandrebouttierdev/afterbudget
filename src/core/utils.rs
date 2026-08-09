@@ -115,6 +115,13 @@ pub fn jour_borne(annee: i32, mois: u32, jour: u32) -> u32 {
     jour.clamp(1, last_day_of_month(annee, mois))
 }
 
+/// Tronque un texte à un nombre maximal de caractères, sans jamais couper un
+/// caractère Unicode au milieu (AB-006). La limite du contrat est exprimée en
+/// caractères, pas en octets.
+pub fn tronquer_texte(texte: &str, max_caracteres: usize) -> String {
+    texte.chars().take(max_caracteres).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,5 +221,17 @@ mod tests {
     fn les_pourcentages_gardent_une_decimale() {
         assert_eq!(format_percentage(12.34), "12.3 %");
         assert_eq!(format_percentage(0.0), "0.0 %");
+    }
+
+    /// La tronquage se fait par frontière de caractère : un caractère Unicode
+    /// multioctet ne doit jamais être coupé en deux (AB-006).
+    #[test]
+    fn un_texte_long_est_tronque_par_caractere() {
+        assert_eq!(tronquer_texte("abcdef", 3), "abc");
+        assert_eq!(tronquer_texte("a😀b😀c", 3), "a😀b");
+        assert_eq!(tronquer_texte("a😀b😀c", 10), "a😀b😀c");
+        assert_eq!(tronquer_texte("", 5), "");
+        let emojis = "a".to_string() + &"😀".repeat(1001);
+        assert_eq!(tronquer_texte(&emojis, 1000).chars().count(), 1000);
     }
 }

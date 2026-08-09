@@ -32,7 +32,7 @@ pub fn valider_creation(
         erreurs.push(("statut".into(), e));
     }
     if let Some(ref note) = dto.note {
-        if note.len() > 1000 {
+        if note.chars().count() > 1000 {
             erreurs.push((
                 "note".into(),
                 "La note ne doit pas dépasser 1 000 caractères.".into(),
@@ -153,5 +153,25 @@ mod tests {
     fn test_valide() {
         let dto = dto_valide();
         assert!(valider_creation(&dto).is_ok());
+    }
+
+    /// Une note de 1000 caractères multioctets passe, 1001 est refusée :
+    /// la limite compte des caractères, pas des octets (AB-006).
+    #[test]
+    fn la_limite_de_note_compte_les_caracteres() {
+        let ok = {
+            let mut d = dto_valide();
+            d.note = Some("😀".repeat(1000));
+            d
+        };
+        assert!(valider_creation(&ok).is_ok());
+
+        let trop = {
+            let mut d = dto_valide();
+            d.note = Some("😀".repeat(1001));
+            d
+        };
+        let erreurs = valider_creation(&trop).unwrap_err();
+        assert!(erreurs.iter().any(|(champ, _)| champ == "note"));
     }
 }

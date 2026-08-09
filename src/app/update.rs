@@ -371,10 +371,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             let categorie_id = state.transaction_form.category_id.clone();
             let type_transaction = state.transaction_form.kind.as_str().to_string();
             let statut = state.transaction_form.status.as_str().to_string();
-            let mut note_raw = state.transaction_form.note.clone();
-            if note_raw.len() > 1000 {
-                note_raw = note_raw[..1000].to_string();
-            }
+            // Limite exprimée en caractères : la tronquage ne doit jamais
+            // couper un caractère Unicode (AB-006).
+            let note_raw = crate::core::utils::tronquer_texte(&state.transaction_form.note, 1000);
             let note = if note_raw.trim().is_empty() {
                 None
             } else {
