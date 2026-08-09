@@ -12,7 +12,6 @@ use crate::modules::recurrences::commandes as recurrences_cmd;
 use crate::modules::recurrences::dtos::CreerRecurrenceDto;
 use crate::modules::transactions::commandes as tx_cmd;
 use crate::modules::transactions::dtos::{CreerTransactionDto, ModifierTransactionDto};
-use crate::modules::transactions::repository as transaction_repo;
 use crate::ui::composants::champ;
 use crate::ui::theme::mise_en_page::MiseEnPage;
 use chrono::Datelike;
@@ -252,7 +251,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         }
         Message::OpenEditTransaction(id) => {
             if let Some(ref db) = state.db {
-                if let Ok(Some(tx)) = transaction_repo::find_by_id(db, &id) {
+                if let Ok(Some(tx)) = tx_cmd::trouver(db, &id) {
                     state.transaction_form = TransactionFormState {
                         is_edit: true,
                         edit_id: Some(tx.id.clone()),
@@ -521,7 +520,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         }
         Message::DeleteTransaction(id) => {
             if let Some(ref db) = state.db {
-                if let Ok(Some(tx)) = transaction_repo::find_by_id(db, &id) {
+                if let Ok(Some(tx)) = tx_cmd::trouver(db, &id) {
                     state.delete_transaction = Some(tx);
                     state.show_delete_confirm = true;
                     // Une seule couche modale à la fois.

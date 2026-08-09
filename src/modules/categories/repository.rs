@@ -101,43 +101,6 @@ pub fn find_all(pool: &DatabasePool) -> Result<Vec<Category>, String> {
     Ok(categories)
 }
 
-pub fn find_by_kind(pool: &DatabasePool, kind: &str) -> Result<Vec<Category>, String> {
-    let mut stmt = pool
-        .conn
-        .prepare(
-            "SELECT id, kind, name, icon, color, sort_order, is_default, is_active, created_at, updated_at
-             FROM categories
-             WHERE kind = ?1
-             ORDER BY sort_order, name",
-        )
-        .map_err(|e| format!("Erreur de préparation : {}", e))?;
-
-    let rows = stmt
-        .query_map(params![kind], |row| {
-            Ok(CategoryRow {
-                id: row.get(0)?,
-                kind: row.get(1)?,
-                name: row.get(2)?,
-                icon: row.get(3)?,
-                color: row.get(4)?,
-                sort_order: row.get(5)?,
-                is_default: row.get::<_, i32>(6)? != 0,
-                is_active: row.get::<_, i32>(7)? != 0,
-                created_at: row.get(8)?,
-                updated_at: row.get(9)?,
-            })
-        })
-        .map_err(|e| format!("Erreur de requête : {}", e))?;
-
-    let mut categories = Vec::new();
-    for row in rows {
-        let row = row.map_err(|e| format!("Erreur de lecture : {}", e))?;
-        categories.push(row_to_category(&row)?);
-    }
-
-    Ok(categories)
-}
-
 pub fn find_by_id(pool: &DatabasePool, id: &str) -> Result<Option<Category>, String> {
     let mut stmt = pool
         .conn

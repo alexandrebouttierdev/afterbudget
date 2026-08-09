@@ -35,6 +35,10 @@ pub fn creer_transaction(
     Ok(tx)
 }
 
+pub fn trouver_transaction(pool: &DatabasePool, id: &str) -> Result<Option<Transaction>, String> {
+    repo::find_by_id(pool, id)
+}
+
 pub fn modifier_transaction(pool: &DatabasePool, tx: &Transaction) -> Result<(), String> {
     crate::modules::categories::service::verifier_categorie(pool, tx.kind, &tx.category_id)?;
     repo::update(pool, tx)

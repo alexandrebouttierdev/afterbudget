@@ -31,6 +31,10 @@ pub fn creer(pool: &DatabasePool, dto: &CreerTransactionDto) -> Result<Transacti
     )
 }
 
+pub fn trouver(pool: &DatabasePool, id: &str) -> Result<Option<Transaction>, String> {
+    service::trouver_transaction(pool, id)
+}
+
 pub fn modifier(pool: &DatabasePool, dto: &ModifierTransactionDto) -> Result<(), String> {
     valid::valider_modification(dto).map_err(|errs| {
         errs.iter()
