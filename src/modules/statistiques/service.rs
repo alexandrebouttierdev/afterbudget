@@ -30,16 +30,8 @@ pub fn calculer_statistiques_mensuelles(
         .checked_sub(total_expenses)
         .ok_or_else(|| "Dépassement de montant dans les statistiques.".to_string())?;
 
-    let txs = transactions::find_by_month(pool, year, month, None, None, None, None)?;
-
-    let income_count = txs
-        .iter()
-        .filter(|t| t.kind == TransactionKind::Income)
-        .count();
-    let expense_count = txs
-        .iter()
-        .filter(|t| t.kind == TransactionKind::Expense)
-        .count();
+    let income_count = transactions::count_by_kind(pool, year, month, "income")?;
+    let expense_count = transactions::count_by_kind(pool, year, month, "expense")?;
 
     let expenses_by_category =
         statistiques_par_categorie(pool, year, month, TransactionKind::Expense, total_expenses)?;
@@ -54,9 +46,9 @@ pub fn calculer_statistiques_mensuelles(
         pending_income,
         completed_expenses,
         pending_expenses,
-        transaction_count: txs.len(),
-        income_count,
-        expense_count,
+        transaction_count: (income_count + expense_count) as usize,
+        income_count: income_count as usize,
+        expense_count: expense_count as usize,
         expenses_by_category,
         income_by_category,
     })

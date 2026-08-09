@@ -366,6 +366,22 @@ pub fn sum_by_kind(pool: &DatabasePool, year: i32, month: u32, kind: &str) -> Re
     result.map_err(|e| format!("Erreur de calcul : {}", e))
 }
 
+pub fn count_by_kind(pool: &DatabasePool, year: i32, month: u32, kind: &str) -> Result<i64, String> {
+    let start_date = format!("{:04}-{:02}-01", year, month);
+    let end_day = last_day_of_month(year, month);
+    let end_date = format!("{:04}-{:02}-{:02}", year, month, end_day);
+
+    let result: Result<i64, _> = pool.conn.query_row(
+        "SELECT COUNT(*) FROM transactions
+         WHERE transaction_date >= ?1 AND transaction_date <= ?2
+         AND kind = ?3",
+        params![start_date, end_date, kind],
+        |row| row.get(0),
+    );
+
+    result.map_err(|e| format!("Erreur de comptage : {}", e))
+}
+
 pub fn sum_by_category(
     pool: &DatabasePool,
     year: i32,

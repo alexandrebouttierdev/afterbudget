@@ -244,3 +244,84 @@ fn une_transaction_verifie_la_categorie() {
     let lignes = repo::find_all_by_month(&pool, 2026, 8).unwrap();
     assert_eq!(lignes.len(), 1);
 }
+
+/// Le comptage SQL doit recouper le chargement complet : les statistiques
+/// ne doivent plus charger toutes les lignes (AB-011).
+#[test]
+fn le_comptage_sql_recoupe_le_chargement() {
+    let pool = base_temporaire::creer_base_test();
+    for i in 0..50 {
+        let kind = if i % 2 == 0 {
+            TransactionKind::Income
+        } else {
+            TransactionKind::Expense
+        };
+        let tx = donnees_test::transaction_test(
+            &format!("Opération {i}"),
+            1000,
+            kind,
+            TransactionStatus::Pending,
+            "2026-08-01",
+            if kind == TransactionKind::Income { "salaire" } else { "autre" },
+        );
+        repo::insert(&pool, &tx).unwrap();
+    }
+    let lignes = repo::find_all_by_month(&pool, 2026, 8).unwrap();
+    let par_kind = |k: &str| repo::count_by_kind(&pool, 2026, 8, k).unwrap();
+    assert_eq!(par_kind("income") as usize, lignes.iter().filter(|t| t.kind == TransactionKind::Income).count());
+    assert_eq!(par_kind("expense") as usize, lignes.iter().filter(|t| t.kind == TransactionKind::Expense).count());
+}
+
+/// Benchmark volumineux : 100 000 transactions dans le mois. Hors CI par
+/// défaut (`cargo test -- --ignored`) ; seuil large pour rester stable.
+#[test]
+#[ignore = "benchmark volumineux : lancer avec cargo test -- --ignored"]
+fn perf_grosses_bases() {
+    let pool = base_temporaire::creer_base_test();
+    let maintenant = "2026-08-01T00:00:00Z";
+
+    {
+        let tx = pool.conn.unchecked_transaction().expect("transaction");
+        {
+            let mut stmt = tx
+                .prepare(
+                    "INSERT INTO transactions (id, kind, label, amount_cents, transaction_date, status,
+                        category_id, note, recurring_rule_id, created_at, updated_at)
+                     VALUES (?1, 'expense', ?2, ?3, '2026-08-15', 'pending',
+                        'autre', NULL, NULL, ?4, ?4)",
+                )
+                .expect("préparation");
+            for i in 0..100_000i64 {
+                stmt.execute(rusqlite::params![
+                    uuid::Uuid::new_v4().to_string(),
+                    format!("Dépense {i}"),
+                    100 + (i % 5000),
+                    maintenant,
+                ])
+                .expect("insertion");
+            }
+        }
+        tx.commit().expect("commit");
+    }
+
+    let debut_lecture = std::time::Instant::now();
+    let lignes = repo::find_all_by_month(&pool, 2026, 8).expect("lecture");
+    let duree_lecture = debut_lecture.elapsed();
+    assert_eq!(lignes.len(), 100_000);
+    assert!(
+        duree_lecture.as_secs() < 5,
+        "lecture trop lente : {duree_lecture:?}"
+    );
+
+    let debut_stats = std::time::Instant::now();
+    let stats = crate::modules::statistiques::service::calculer_statistiques_mensuelles(
+        &pool, 2026, 8,
+    )
+    .expect("statistiques");
+    let duree_stats = debut_stats.elapsed();
+    assert_eq!(stats.transaction_count, 100_000);
+    assert!(
+        duree_stats.as_secs() < 5,
+        "statistiques trop lentes : {duree_stats:?}"
+    );
+}
