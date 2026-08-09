@@ -95,12 +95,17 @@ pub fn supprimer(pool: &DatabasePool, identifiant: &str) -> Result<(), String> {
             params![identifiant],
         )
         .map_err(|e| format!("Détachement des transactions : {e}"))?;
-    pool.conn
+    let supprimees = pool
+        .conn
         .execute(
             "DELETE FROM recurring_rules WHERE id = ?1",
             params![identifiant],
         )
         .map_err(|e| format!("Suppression récurrence : {e}"))?;
+
+    if supprimees == 0 {
+        return Err(format!("Récurrence introuvable : {identifiant}"));
+    }
     Ok(())
 }
 

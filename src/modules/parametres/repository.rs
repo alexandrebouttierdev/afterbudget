@@ -57,7 +57,8 @@ pub fn insert_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
 
 pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), String> {
     let now = chrono::Utc::now().to_rfc3339();
-    pool.conn
+    let maj = pool
+        .conn
         .execute(
             "UPDATE app_settings SET current_balance_cents = ?1, overdraft_limit_cents = ?2,
              currency_code = ?3, locale = ?4, theme = ?5, balance_updated_at = ?6,
@@ -75,6 +76,10 @@ pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
             ],
         )
         .map_err(|e| format!("Erreur de mise à jour des paramètres : {}", e))?;
+
+    if maj == 0 {
+        return Err("Aucun paramètre à mettre à jour : la ligne id=1 est absente.".into());
+    }
     Ok(())
 }
 

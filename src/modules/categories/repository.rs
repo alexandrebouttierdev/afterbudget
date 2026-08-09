@@ -192,7 +192,8 @@ pub fn insert(pool: &DatabasePool, cat: &Category) -> Result<(), String> {
 
 pub fn update(pool: &DatabasePool, cat: &Category) -> Result<(), String> {
     let now = chrono::Utc::now().to_rfc3339();
-    pool.conn
+    let maj = pool
+        .conn
         .execute(
             "UPDATE categories SET name = ?1, icon = ?2, color = ?3, sort_order = ?4, is_active = ?5, updated_at = ?6
              WHERE id = ?7",
@@ -207,5 +208,9 @@ pub fn update(pool: &DatabasePool, cat: &Category) -> Result<(), String> {
             ],
         )
         .map_err(|e| format!("Erreur de mise à jour : {}", e))?;
+
+    if maj == 0 {
+        return Err(format!("Catégorie introuvable : {}", cat.id));
+    }
     Ok(())
 }

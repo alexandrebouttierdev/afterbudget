@@ -147,3 +147,10 @@ fn une_regle_invalide_est_refusee() {
     assert!(commandes::creer(&pool, &invalide).is_err());
     assert!(commandes::lister(&pool).unwrap().is_empty());
 }
+
+/// Supprimer une règle inexistante doit échouer (AB-001, AB-009).
+#[test]
+fn supprimer_une_regle_absente_echoue() {
+    let pool = base();
+    assert!(commandes::supprimer(&pool, "id-inexistant").is_err());
+}

@@ -272,7 +272,8 @@ pub fn insert(pool: &DatabasePool, t: &Transaction) -> Result<(), String> {
 
 pub fn update(pool: &DatabasePool, t: &Transaction) -> Result<(), String> {
     let now = chrono::Utc::now().to_rfc3339();
-    pool.conn
+    let maj = pool
+        .conn
         .execute(
             "UPDATE transactions SET kind = ?1, label = ?2, amount_cents = ?3, transaction_date = ?4,
              status = ?5, category_id = ?6, note = ?7, updated_at = ?8
@@ -290,13 +291,22 @@ pub fn update(pool: &DatabasePool, t: &Transaction) -> Result<(), String> {
             ],
         )
         .map_err(|e| format!("Erreur de mise à jour : {}", e))?;
+
+    if maj == 0 {
+        return Err(format!("Transaction introuvable : {}", t.id));
+    }
     Ok(())
 }
 
 pub fn delete_by_id(pool: &DatabasePool, id: &str) -> Result<(), String> {
-    pool.conn
+    let supprimes = pool
+        .conn
         .execute("DELETE FROM transactions WHERE id = ?1", params![id])
         .map_err(|e| format!("Erreur de suppression : {}", e))?;
+
+    if supprimes == 0 {
+        return Err(format!("Transaction introuvable : {}", id));
+    }
     Ok(())
 }
 

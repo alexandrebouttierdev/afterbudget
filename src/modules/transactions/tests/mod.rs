@@ -122,3 +122,21 @@ fn test_contrainte_cle_etrangere() {
     );
     assert!(repo::insert(&pool, &tx).is_err());
 }
+
+/// Modifier ou supprimer une transaction inexistante doit échouer : un
+/// succès silencieux ferait croire à une persistance qui n'a pas eu lieu
+/// (AB-001, AB-009).
+#[test]
+fn modifier_une_transaction_absente_echoue() {
+    let pool = base_temporaire::creer_base_test();
+    let tx = donnees_test::transaction_test(
+        "Fantôme",
+        1000,
+        TransactionKind::Expense,
+        TransactionStatus::Pending,
+        "2026-08-01",
+        "autre",
+    );
+    assert!(repo::update(&pool, &tx).is_err());
+    assert!(repo::delete_by_id(&pool, "id-inexistant").is_err());
+}
