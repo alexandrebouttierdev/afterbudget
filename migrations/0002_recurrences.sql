@@ -21,9 +21,5 @@ CREATE TABLE IF NOT EXISTS recurring_rules (
     updated_at TEXT NOT NULL
 );
 
--- Rattachement d'une transaction à la règle qui l'a produite. Sert de garde-fou
--- anti-doublon : une règle ne matérialise qu'une occurrence par mois.
-ALTER TABLE transactions ADD COLUMN recurring_rule_id TEXT REFERENCES recurring_rules(id);
-
 CREATE INDEX IF NOT EXISTS idx_transactions_recurring ON transactions(recurring_rule_id);
 CREATE INDEX IF NOT EXISTS idx_recurring_active ON recurring_rules(is_active);
