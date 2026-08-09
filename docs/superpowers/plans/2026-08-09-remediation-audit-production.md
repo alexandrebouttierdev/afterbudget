@@ -44,7 +44,8 @@ fn un_texte_long_est_tronque_par_caractere() {
     assert_eq!(tronquer_texte("a😀b😀c", 3), "a😀b");
     assert_eq!(tronquer_texte("a😀b😀c", 10), "a😀b😀c");
     assert_eq!(tronquer_texte("", 5), "");
-    let emojis = "a".to_string() + &"😀".repeat(250);
+    // 1 + 1001 emojis = 1002 caractères : le tronquage doit ramener à 1000.
+    let emojis = "a".to_string() + &"😀".repeat(1001);
     assert_eq!(tronquer_texte(&emojis, 1000).chars().count(), 1000);
 }
 ```
@@ -86,9 +87,9 @@ Dans `src/app/update.rs`, remplacer les lignes 374-377 :
 par :
 
 ```rust
-            // Limite exprimée en caractères : la tronquage ne doit jamais
+            // Limite exprimée en caractères : le tronquage ne doit jamais
             // couper un caractère Unicode (AB-006).
-            let mut note_raw =
+            let note_raw =
                 crate::core::utils::tronquer_texte(&state.transaction_form.note, 1000);
 ```
 
