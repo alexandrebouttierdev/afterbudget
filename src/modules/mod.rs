@@ -2,6 +2,7 @@ pub mod budget;
 pub mod categories;
 pub mod commun;
 pub mod import_export;
+pub mod mise_a_jour;
 pub mod onboarding;
 pub mod parametres;
 pub mod recurrences;
