@@ -83,14 +83,26 @@ pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
     Ok(())
 }
 
+/// Efface toutes les données d'une transaction unique : règles récurrentes,
+/// transactions, catégories personnalisées, paramètres. En cas d'erreur, tout
+/// est annulé — jamais de suppression partielle (AB-004).
 pub fn reset_all_data(pool: &DatabasePool) -> Result<(), String> {
-    pool.conn
-        .execute_batch(
-            "DELETE FROM transactions;
-             DELETE FROM app_settings;
-             DELETE FROM categories WHERE is_default = 0;",
-        )
-        .map_err(|e| format!("Erreur de réinitialisation : {}", e))?;
+    let tx = pool
+        .conn
+        .unchecked_transaction()
+        .map_err(|e| format!("Démarrage de la transaction de réinitialisation : {e}"))?;
+
+    tx.execute("DELETE FROM recurring_rules", [])
+        .map_err(|e| format!("Erreur de réinitialisation des règles : {e}"))?;
+    tx.execute("DELETE FROM transactions", [])
+        .map_err(|e| format!("Erreur de réinitialisation des transactions : {e}"))?;
+    tx.execute("DELETE FROM categories WHERE is_default = 0", [])
+        .map_err(|e| format!("Erreur de réinitialisation des catégories : {e}"))?;
+    tx.execute("DELETE FROM app_settings", [])
+        .map_err(|e| format!("Erreur de réinitialisation des paramètres : {e}"))?;
+
+    tx.commit()
+        .map_err(|e| format!("Erreur de commit de la réinitialisation : {e}"))?;
     Ok(())
 }
 
