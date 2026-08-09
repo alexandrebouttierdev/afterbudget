@@ -20,7 +20,9 @@ impl DatabasePool {
         conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")
             .map_err(|e| format!("Erreur configuration SQLite : {}", e))?;
 
-        tracing::info!("Base de données ouverte : {}", path.display());
+        crate::core::config::restreindre_permissions_fichier(path)?;
+
+        tracing::debug!("Base de données ouverte.");
 
         Ok(Self {
             conn,
@@ -103,5 +105,24 @@ impl DatabasePool {
             return Err(format!("Base corrompue : {}", resultat));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// La base créée ne doit pas être lisible par les autres utilisateurs
+    /// locaux (AB-010).
+    #[test]
+    #[cfg(unix)]
+    fn la_base_est_privee() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let chemin = dir.path().join("base.sqlite");
+        let pool = DatabasePool::open(&chemin).unwrap();
+        drop(pool);
+        let mode = std::fs::metadata(&chemin).unwrap().permissions().mode();
+        assert_eq!(mode & 0o077, 0, "mode observé : {mode:o}");
     }
 }

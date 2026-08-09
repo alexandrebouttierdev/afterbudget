@@ -190,7 +190,8 @@ impl Default for AppState {
 impl AppState {
     pub fn new() -> Self {
         let now = chrono::Utc::now();
-        let db_path = crate::core::config::database_path();
+        let db_path = crate::core::config::database_path()
+            .unwrap_or_else(|_| std::path::PathBuf::from("afterbudget.sqlite"));
 
         Self {
             db: None,

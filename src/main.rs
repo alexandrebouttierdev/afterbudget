@@ -19,7 +19,7 @@ pub fn main() -> iced::Result {
         )
         .init();
 
-    let db_path = config::database_path();
+    let db_path = config::database_path().expect("chemin de la base");
     let db = DatabasePool::open(&db_path).unwrap_or_else(|e| {
         tracing::error!("Base inaccessible : {}", e);
         panic!("Base inaccessible : {}", e);
