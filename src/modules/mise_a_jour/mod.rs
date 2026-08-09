@@ -5,4 +5,5 @@
 
 pub mod client;
 pub mod plateforme;
+pub mod telechargement;
 pub mod versions;
