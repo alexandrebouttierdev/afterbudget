@@ -7,6 +7,12 @@ pub fn obtenir_parametres(pool: &DatabasePool) -> Result<Option<AppSettings>, St
     repo::get_settings(pool)
 }
 
+pub fn marquer_dernier_export(pool: &DatabasePool) -> Result<(), String> {
+    let mut settings = repo::get_settings(pool)?.unwrap_or_default();
+    settings.last_export_date = Some(chrono::Utc::now().to_rfc3339());
+    repo::update_settings(pool, &settings)
+}
+
 pub fn mettre_a_jour_solde(pool: &DatabasePool, solde: Money) -> Result<(), String> {
     let mut settings = repo::get_settings(pool)?.unwrap_or_default();
     settings.current_balance = solde;

@@ -52,6 +52,30 @@ fn mettre_a_jour_sans_ligne_de_parametres_echoue() {
     );
 }
 
+/// La date du dernier export doit survivre au redémarrage (AB-012/P2).
+#[test]
+fn la_date_du_dernier_export_survit_a_la_reouverture() {
+    let repertoire = tempfile::tempdir().unwrap();
+    let chemin = repertoire.path().join("base.sqlite");
+
+    let pool = DatabasePool::open(&chemin).unwrap();
+    crate::core::db::migrations::run_migrations(&pool.conn).unwrap();
+    let parametres = AppSettings {
+        current_balance: Money::from_cents(10000),
+        ..Default::default()
+    };
+    repo::insert_settings(&pool, &parametres).unwrap();
+    service::marquer_dernier_export(&pool).unwrap();
+    drop(pool);
+
+    let relu = DatabasePool::open(&chemin).unwrap();
+    let parametres = repo::get_settings(&relu).unwrap().unwrap();
+    assert!(
+        parametres.last_export_date.is_some(),
+        "la date doit être persistée"
+    );
+}
+
 fn inserer_scenario_avec_regle(pool: &DatabasePool) {
     // Catégorie personnalisée référencée par une règle ET une transaction :
     // le scénario exact de l'audit (AB-004).

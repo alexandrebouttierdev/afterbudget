@@ -36,4 +36,5 @@ pub struct SettingsRow {
     pub onboarding_completed: bool,
     pub created_at: String,
     pub updated_at: String,
+    pub last_export_date: Option<String>,
 }

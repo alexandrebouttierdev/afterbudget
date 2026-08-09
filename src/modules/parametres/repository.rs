@@ -7,7 +7,7 @@ use crate::domaine::parametres::AppSettings;
 pub fn get_settings(pool: &DatabasePool) -> Result<Option<AppSettings>, String> {
     let result = pool.conn.query_row(
         "SELECT id, current_balance_cents, overdraft_limit_cents, currency_code, locale, theme,
-                balance_updated_at, onboarding_completed, created_at, updated_at
+                balance_updated_at, onboarding_completed, created_at, updated_at, last_export_date
          FROM app_settings WHERE id = 1",
         [],
         |row| {
@@ -22,6 +22,7 @@ pub fn get_settings(pool: &DatabasePool) -> Result<Option<AppSettings>, String> 
                 onboarding_completed: row.get::<_, i32>(7)? != 0,
                 created_at: row.get(8)?,
                 updated_at: row.get(9)?,
+                last_export_date: row.get(10)?,
             })
         },
     );
@@ -38,8 +39,8 @@ pub fn insert_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
     pool.conn
         .execute(
             "INSERT INTO app_settings (id, current_balance_cents, overdraft_limit_cents, currency_code, locale, theme,
-             balance_updated_at, onboarding_completed, created_at, updated_at)
-             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
+             balance_updated_at, onboarding_completed, last_export_date, created_at, updated_at)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
             params![
                 s.current_balance.cents,
                 s.overdraft_limit.cents,
@@ -48,6 +49,7 @@ pub fn insert_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
                 s.theme,
                 s.balance_updated_at,
                 s.onboarding_completed as i32,
+                s.last_export_date,
                 &now,
             ],
         )
@@ -62,7 +64,7 @@ pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
         .execute(
             "UPDATE app_settings SET current_balance_cents = ?1, overdraft_limit_cents = ?2,
              currency_code = ?3, locale = ?4, theme = ?5, balance_updated_at = ?6,
-             onboarding_completed = ?7, updated_at = ?8
+             onboarding_completed = ?7, last_export_date = ?8, updated_at = ?9
              WHERE id = 1",
             params![
                 s.current_balance.cents,
@@ -72,6 +74,7 @@ pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
                 s.theme,
                 s.balance_updated_at,
                 s.onboarding_completed as i32,
+                s.last_export_date,
                 &now,
             ],
         )
@@ -117,6 +120,6 @@ fn row_to_settings(row: &SettingsRow) -> AppSettings {
         theme: row.theme.clone(),
         balance_updated_at: row.balance_updated_at.clone(),
         onboarding_completed: row.onboarding_completed,
-        last_export_date: None,
+        last_export_date: row.last_export_date.clone(),
     }
 }

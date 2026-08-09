@@ -626,25 +626,13 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
 
                 match io_cmd::exporter(db, &dest_path) {
                     Ok(()) => {
-                        let relu = match params_repo::get_settings(db) {
-                            Ok(s) => s,
-                            Err(e) => {
-                                state.notification = Some(Notification::erreur(format!(
-                                    "Relecture des paramètres impossible : {e}"
-                                )));
-                                return Task::none();
-                            }
-                        };
-                        if let Some(mut s) = relu {
-                            s.last_export_date = Some(chrono::Utc::now().to_rfc3339());
-                            if let Err(e) = params_repo::update_settings(db, &s) {
-                                state.notification = Some(Notification::erreur(format!(
-                                    "Export réussi, mais mémorisation de la date impossible : {e}"
-                                )));
-                                return Task::none();
-                            }
-                            state.settings = Some(s);
+                        if let Err(e) = parametres_service::marquer_dernier_export(db) {
+                            state.notification = Some(Notification::erreur(format!(
+                                "Export réussi, mais mémorisation de la date impossible : {e}"
+                            )));
+                            return Task::none();
                         }
+                        state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
                         state.notification = Some(Notification::succes(format!(
                             "Export réussi vers {}",
                             dest_path.display()
