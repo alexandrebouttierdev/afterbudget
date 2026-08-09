@@ -19,15 +19,27 @@ pub fn main() -> iced::Result {
         )
         .init();
 
-    let db_path = config::database_path().expect("chemin de la base");
-    let db = DatabasePool::open(&db_path).unwrap_or_else(|e| {
-        tracing::error!("Base inaccessible : {}", e);
-        panic!("Base inaccessible : {}", e);
-    });
+    let db_path = match config::database_path() {
+        Ok(chemin) => chemin,
+        Err(e) => {
+            tracing::error!("{}", e);
+            eprintln!("AfterBudget : {}", e);
+            std::process::exit(1);
+        }
+    };
+    let db = match DatabasePool::open(&db_path) {
+        Ok(db) => db,
+        Err(e) => {
+            tracing::error!("{}", e);
+            eprintln!("AfterBudget : {}", e);
+            std::process::exit(1);
+        }
+    };
 
     if let Err(e) = migrations::run_migrations(&db.conn) {
-        tracing::error!("Migration échouée : {}", e);
-        panic!("Migration échouée : {}", e);
+        tracing::error!("{}", e);
+        eprintln!("AfterBudget : {}", e);
+        std::process::exit(1);
     }
 
     let mut state = AppState::new();
@@ -36,6 +48,8 @@ pub fn main() -> iced::Result {
 
     if let Err(e) = state.load_data() {
         tracing::error!("Chargement initial impossible : {}", e);
+        eprintln!("AfterBudget : le chargement initial a échoué ({}) — arrêt.", e);
+        std::process::exit(1);
     }
 
     iced::application("AfterBudget", update, view)
