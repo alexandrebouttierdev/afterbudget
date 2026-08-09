@@ -10,8 +10,11 @@ pub fn valider_import(path: &Path) -> Result<(), String> {
     service::valider_import(path)
 }
 
-pub fn importer(pool: &mut DatabasePool, source: &Path) -> Result<(), String> {
-    service::importer(pool, source)
+pub fn importer_en_arriere_plan(
+    chemin_actuel: std::path::PathBuf,
+    source: std::path::PathBuf,
+) -> Result<(), String> {
+    service::importer_en_arriere_plan(chemin_actuel, source)
 }
 
 pub fn nom_sauvegarde() -> String {

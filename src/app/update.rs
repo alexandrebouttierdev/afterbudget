@@ -682,23 +682,56 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ConfirmImport(path_str) => {
-            let path = std::path::PathBuf::from(&path_str);
-            let import_result = perform_import(state, &path);
+            let source = std::path::PathBuf::from(&path_str);
+            let Some(chemin_actuel) = state.db.as_ref().map(|p| p.path.clone()) else {
+                state.import_error = Some("Base de données non initialisée.".into());
+                return Task::none();
+            };
 
-            match import_result {
-                Ok(()) => {
-                    state.show_import_confirm = false;
-                    state.import_file_path = None;
-                    state.load_data().ok();
-                    state.notification = Some(Notification::succes("Import réussi."));
+            Task::perform(
+                async move { io_cmd::importer_en_arriere_plan(chemin_actuel, source) },
+                Message::ImportResult,
+            )
+        }
+        Message::ImportResult(resultat) => {
+            state.show_import_confirm = false;
+            state.import_file_path = None;
+
+            // Réouverture systématique : la connexion vivante peut pointer
+            // vers un inode remplacé par l'import ou la restauration.
+            let reouverture = state
+                .db
+                .as_ref()
+                .map(|p| p.path.clone())
+                .ok_or_else(|| "Base de données non initialisée.".to_string())
+                .and_then(|chemin| DatabasePool::open(&chemin));
+
+            match (resultat, reouverture) {
+                (Ok(()), Ok(pool)) => {
+                    state.db = Some(pool);
+                    match state.load_data() {
+                        Ok(()) => state.notification = Some(Notification::succes("Import réussi.")),
+                        Err(e) => state.notification = Some(Notification::erreur(format!(
+                            "Import effectué, mais rechargement impossible : {e}"
+                        ))),
+                    }
                 }
-                Err(e) => {
-                    state.show_import_confirm = false;
-                    state.import_file_path = None;
+                (Ok(()), Err(e)) => {
+                    state.notification = Some(Notification::erreur(format!(
+                        "Import effectué, mais réouverture impossible : {e}"
+                    )));
+                }
+                (Err(e), Ok(pool)) => {
+                    state.db = Some(pool);
                     state.import_error = Some(format!("Erreur d'import : {e}"));
-                    state.notification = Some(Notification::erreur(
-                        "L'import a échoué, tes données sont intactes.",
-                    ));
+                    state.notification =
+                        Some(Notification::erreur(format!("L'import a échoué : {e}")));
+                }
+                (Err(e), Err(e2)) => {
+                    state.import_error = Some(format!("Erreur d'import : {e}"));
+                    state.notification = Some(Notification::erreur(format!(
+                        "L'import a échoué : {e} ; réouverture impossible : {e2}"
+                    )));
                 }
             }
             Task::none()
@@ -852,34 +885,4 @@ fn appliquer_theme(state: &mut AppState, mode: ThemeMode) -> Task<Message> {
 /// Place le focus clavier sur un champ identifié.
 fn focaliser(identifiant: &'static str) -> Task<Message> {
     iced::widget::text_input::focus(iced::widget::text_input::Id::new(identifiant))
-}
-
-/// Effectue l'import d'une base SQLite
-fn perform_import(state: &mut AppState, source_path: &std::path::Path) -> Result<(), String> {
-    let db = state
-        .db
-        .as_ref()
-        .ok_or("Base de données non initialisée.")?;
-    let current_path = db.path.clone();
-
-    let backup_dir = current_path.parent().ok_or("Chemin de base invalide.")?;
-
-    let backup_path = backup_dir.join(format!(
-        "afterbudget-backup-avant-import-{}.sqlite",
-        chrono::Utc::now().format("%Y%m%d-%H%M%S")
-    ));
-
-    db.backup_to(&backup_path)?;
-
-    DatabasePool::validate_sqlite_file(source_path)?;
-
-    drop(state.db.take());
-
-    std::fs::copy(source_path, &current_path)
-        .map_err(|e| format!("Erreur de copie du fichier : {}", e))?;
-
-    let new_pool = DatabasePool::open(&current_path)?;
-    state.db = Some(new_pool);
-
-    Ok(())
 }

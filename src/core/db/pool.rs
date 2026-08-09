@@ -57,14 +57,50 @@ impl DatabasePool {
         Ok(())
     }
 
-    /// Vérifie qu'un fichier est une base SQLite valide
+    /// Vérifie qu'un fichier est une base SQLite valide : seule l'en-tête de
+    /// 16 octets est lue, jamais le fichier entier (AB-003, AB-011).
     pub fn validate_sqlite_file(path: &Path) -> Result<(), String> {
+        use std::io::Read;
+
         if !path.exists() {
             return Err("Fichier introuvable.".into());
         }
-        let header = std::fs::read(path).map_err(|e| format!("Lecture impossible : {}", e))?;
-        if header.len() < 16 || &header[0..16] != b"SQLite format 3\0" {
+        let mut fichier =
+            std::fs::File::open(path).map_err(|e| format!("Lecture impossible : {}", e))?;
+        let mut en_tete = [0u8; 16];
+        let lus = fichier
+            .read(&mut en_tete)
+            .map_err(|e| format!("Lecture impossible : {}", e))?;
+        if lus < 16 || &en_tete != b"SQLite format 3\0" {
             return Err("Le fichier n'est pas une base SQLite.".into());
+        }
+        Ok(())
+    }
+
+    /// Ouvre une base en lecture seule : aucune écriture, aucun WAL/SHM créé.
+    /// Sert à valider un fichier importé sans le toucher (AB-003).
+    pub fn open_read_only(path: &Path) -> Result<Self, String> {
+        let conn = rusqlite::Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .map_err(|e| format!("Ouverture en lecture seule impossible : {}", e))?;
+        Ok(Self {
+            conn,
+            path: path.to_path_buf(),
+        })
+    }
+
+    /// Exécute `PRAGMA integrity_check` sur un fichier, en lecture seule
+    /// (AB-003).
+    pub fn verifier_integrite(path: &Path) -> Result<(), String> {
+        let pool = Self::open_read_only(path)?;
+        let resultat: String = pool
+            .conn
+            .query_row("PRAGMA integrity_check", [], |ligne| ligne.get(0))
+            .map_err(|e| format!("Vérification d'intégrité impossible : {}", e))?;
+        if resultat != "ok" {
+            return Err(format!("Base corrompue : {}", resultat));
         }
         Ok(())
     }

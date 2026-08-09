@@ -65,6 +65,8 @@ pub enum Message {
     ExportDatabase,
     InitiateImport,
     ConfirmImport(String),
+    /// Résultat de l'import en arrière-plan (AB-003, AB-011).
+    ImportResult(Result<(), String>),
     CancelImport,
 
     // ---- Réinitialisation ----
