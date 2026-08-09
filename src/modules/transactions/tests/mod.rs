@@ -169,3 +169,78 @@ fn une_ligne_invalide_fait_echouer_le_chargement() {
         "l'erreur doit nommer la ligne : {erreur}"
     );
 }
+
+/// Une transaction ne peut référencer qu'une catégorie existante, active
+/// et du même sens (AB-009).
+#[test]
+fn une_transaction_verifie_la_categorie() {
+    let pool = base_temporaire::creer_base_test();
+
+    // Catégorie income désactivée et catégorie expense active.
+    let maintenant = chrono::Utc::now().to_rfc3339();
+    pool.conn
+        .execute(
+            "INSERT INTO categories (id, kind, name, icon, color, sort_order, is_default, is_active, created_at, updated_at)
+             VALUES ('income-inactive', 'income', 'Bonus inactif', 'x', '#3B82F6', 99, 0, 0, ?1, ?1)",
+            rusqlite::params![&maintenant],
+        )
+        .unwrap();
+
+    use crate::modules::transactions::service;
+    use crate::domaine::argent::Money;
+
+    assert!(service::creer_transaction(
+        &pool,
+        TransactionKind::Expense,
+        "Courses",
+        Money::from_cents(5000),
+        chrono::NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+        "alimentation",
+        TransactionStatus::Pending,
+        None,
+    )
+    .is_ok());
+
+    // Catégorie inconnue.
+    assert!(service::creer_transaction(
+        &pool,
+        TransactionKind::Expense,
+        "Courses",
+        Money::from_cents(5000),
+        chrono::NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+        "n-existe-pas",
+        TransactionStatus::Pending,
+        None,
+    )
+    .is_err());
+
+    // Catégorie inactive.
+    assert!(service::creer_transaction(
+        &pool,
+        TransactionKind::Income,
+        "Bonus",
+        Money::from_cents(5000),
+        chrono::NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+        "income-inactive",
+        TransactionStatus::Pending,
+        None,
+    )
+    .is_err());
+
+    // Catégorie du mauvais sens.
+    assert!(service::creer_transaction(
+        &pool,
+        TransactionKind::Expense,
+        "Bonus",
+        Money::from_cents(5000),
+        chrono::NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+        "salaire",
+        TransactionStatus::Pending,
+        None,
+    )
+    .is_err());
+
+    // Rien d'autre n'a été persisté.
+    let lignes = repo::find_all_by_month(&pool, 2026, 8).unwrap();
+    assert_eq!(lignes.len(), 1);
+}

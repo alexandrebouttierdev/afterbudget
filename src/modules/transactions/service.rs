@@ -16,6 +16,7 @@ pub fn creer_transaction(
     status: TransactionStatus,
     note: Option<String>,
 ) -> Result<Transaction, String> {
+    crate::modules::categories::service::verifier_categorie(pool, kind, category_id)?;
     let now = chrono::Utc::now();
     let tx = Transaction {
         id: uuid::Uuid::new_v4().to_string(),
@@ -35,6 +36,7 @@ pub fn creer_transaction(
 }
 
 pub fn modifier_transaction(pool: &DatabasePool, tx: &Transaction) -> Result<(), String> {
+    crate::modules::categories::service::verifier_categorie(pool, tx.kind, &tx.category_id)?;
     repo::update(pool, tx)
 }
 

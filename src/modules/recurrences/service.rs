@@ -11,6 +11,7 @@ pub fn creer(pool: &DatabasePool, dto: &CreerRecurrenceDto) -> Result<RecurringR
     let montant = crate::modules::commun::valider_montant(&dto.montant)?;
     let genre =
         TransactionKind::from_str(&dto.type_transaction).ok_or("Type de transaction invalide.")?;
+    crate::modules::categories::service::verifier_categorie(pool, genre, &dto.categorie_id)?;
 
     let maintenant = chrono::Utc::now();
     let regle = RecurringRule {
