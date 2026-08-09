@@ -69,6 +69,7 @@ jeu_dicones! {
     Filtre => "filtre",
     Import => "import",
     Export => "export",
+    Telechargement => "import",
     ChevronGauche => "chevron-gauche",
     ChevronDroit => "chevron-droit",
     ChevronBas => "chevron-bas",

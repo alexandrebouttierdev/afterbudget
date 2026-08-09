@@ -9,6 +9,7 @@ use iced::{Alignment, Element, Length};
 
 use crate::app::message::{Message, Screen};
 use crate::app::state::{AppState, ThemeMode};
+use crate::ui::composants::banniere_maj;
 use crate::ui::composants::icone::Icone;
 use crate::ui::composants::navigation::{self, Entree};
 use crate::ui::composants::notification;
@@ -65,6 +66,11 @@ pub fn fenetre(state: &AppState) -> Element<'_, Message> {
 
     let zone = column![
         en_tete,
+        if let Some(banniere) = banniere_maj::banniere(state) {
+            banniere
+        } else {
+            Space::with_height(0).into()
+        },
         container(corps_defilant)
             .width(Length::Fill)
             .height(Length::Fill)

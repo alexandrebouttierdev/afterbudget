@@ -6,6 +6,7 @@
 
 pub mod anneau;
 pub mod badge;
+pub mod banniere_maj;
 pub mod bouton;
 pub mod calendrier;
 pub mod carte;
