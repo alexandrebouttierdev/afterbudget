@@ -72,6 +72,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::CompleteOnboarding => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let dto = TerminerOnboardingDto {
                 solde_actuel: state.onboarding_balance_str.clone(),
                 decouvert_autorise: state.onboarding_overdraft_str.clone(),
@@ -670,6 +673,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::InitiateImport => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let file = rfd::FileDialog::new()
                 .set_title("Importer mes données")
                 .add_filter("Base SQLite", &["sqlite", "db"])
@@ -685,6 +691,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ConfirmImport(path_str) => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let source = std::path::PathBuf::from(&path_str);
             let Some(chemin_actuel) = state.db.as_ref().map(|p| p.path.clone()) else {
                 state.import_error = Some("Base de données non initialisée.".into());
