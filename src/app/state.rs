@@ -3,6 +3,8 @@ use crate::domaine::budget::{BudgetSummary, MonthlyStatistics};
 use crate::domaine::categorie::Category;
 use crate::domaine::parametres::AppSettings;
 use crate::domaine::transaction::{Transaction, TransactionKind, TransactionStatus};
+use crate::modules::mise_a_jour::client::AssetInfo;
+use crate::modules::mise_a_jour::versions::Version;
 use crate::ui::composants::badge::Ton;
 use crate::ui::theme::mise_en_page::MiseEnPage;
 use chrono::Datelike;
@@ -126,6 +128,28 @@ impl TransactionFormState {
     }
 }
 
+/// Mise à jour disponible, prête à être proposée à l'utilisateur.
+#[derive(Debug, Clone)]
+pub struct UpdateInfo {
+    pub version: Version,
+    /// Page web de la release, ouverte quand aucun asset ne correspond.
+    pub url_page: String,
+    /// Asset à télécharger, absent si le système n'est pas reconnu.
+    pub asset: Option<AssetInfo>,
+}
+
+/// Vrai si la version distante mérite d'être proposée : plus récente que la
+/// version locale et différente de celle déjà ignorée.
+pub fn update_pertinente(locale: &Version, distante: &Version, ignoree: Option<&str>) -> bool {
+    if distante <= locale {
+        return false;
+    }
+    match ignoree {
+        Some(ignoree) => distante != &Version::parse(ignoree).unwrap_or(locale.clone()),
+        None => true,
+    }
+}
+
 pub struct AppState {
     pub db: Option<DatabasePool>,
     pub db_path: String,
@@ -182,6 +206,11 @@ pub struct AppState {
     pub monthly_statistics: Option<MonthlyStatistics>,
     /// Statistiques du mois précédent, pour les comparaisons.
     pub previous_statistics: Option<MonthlyStatistics>,
+
+    /// Mise à jour proposée par la bannière, le cas échéant.
+    pub update_info: Option<UpdateInfo>,
+    /// Vrai pendant le téléchargement de l'installeur.
+    pub update_downloading: bool,
 }
 
 impl Default for AppState {
@@ -235,6 +264,8 @@ impl AppState {
             show_reset_confirm: false,
             monthly_statistics: None,
             previous_statistics: None,
+            update_info: None,
+            update_downloading: false,
         }
     }
 
@@ -500,5 +531,31 @@ mod tests {
         etat.import_en_cours = true;
         assert!(etat.import_en_cours, "le champ doit être modifiable");
         etat.import_en_cours = false;
+    }
+
+    /// Une mise à jour est proposée uniquement si elle est plus récente que la
+    /// version locale et non déjà ignorée.
+    #[test]
+    fn une_mise_a_jour_est_proposee_seulement_si_pertinente() {
+        let locale = Version::parse("0.1.0").unwrap();
+        let plus_recente = Version::parse("0.2.0").unwrap();
+        let plus_ancienne = Version::parse("0.0.9").unwrap();
+
+        assert!(update_pertinente(&locale, &plus_recente, None));
+        assert!(!update_pertinente(&locale, &plus_ancienne, None));
+        assert!(!update_pertinente(&locale, &locale, None));
+
+        assert!(
+            !update_pertinente(&locale, &plus_recente, Some("0.2.0")),
+            "une version déjà ignorée ne doit pas être reproposée"
+        );
+        assert!(
+            update_pertinente(&locale, &plus_recente, Some("0.1.9")),
+            "ignorer une autre version n'empêche pas la nouvelle"
+        );
+        assert!(
+            update_pertinente(&locale, &plus_recente, Some("pas une version")),
+            "une version ignorée illisible est ignorée comme valeur"
+        );
     }
 }

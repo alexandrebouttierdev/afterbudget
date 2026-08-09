@@ -74,6 +74,18 @@ pub enum Message {
     ConfirmResetData,
     CancelReset,
 
+    // ---- Mise à jour ----
+    /// Vérifie au démarrage si une version plus récente existe.
+    CheckForUpdates,
+    /// Résultat de la vérification : `Ok(None)` si aucune mise à jour.
+    UpdateCheckResult(
+        Result<Option<crate::modules::mise_a_jour::client::ReleaseInfo>, String>,
+    ),
+    DownloadUpdate,
+    /// Résultat du téléchargement de l'installeur.
+    DownloadResult(Result<std::path::PathBuf, String>),
+    IgnoreUpdate,
+
     // ---- Raccourcis clavier ----
     FocusSearch,
     KeyboardEscape,

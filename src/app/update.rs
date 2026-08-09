@@ -4,6 +4,10 @@ use crate::core::db::pool::DatabasePool;
 use crate::domaine::argent::Money;
 use crate::domaine::transaction::TransactionKind;
 use crate::modules::import_export::commandes as io_cmd;
+use crate::modules::mise_a_jour::client as maj_client;
+use crate::modules::mise_a_jour::plateforme;
+use crate::modules::mise_a_jour::telechargement as maj_telechargement;
+use crate::modules::mise_a_jour::versions::Version;
 use crate::modules::onboarding::commandes as onboarding_cmd;
 use crate::modules::onboarding::dtos::TerminerOnboardingDto;
 use crate::modules::parametres::service as parametres_service;
@@ -17,7 +21,8 @@ use chrono::Datelike;
 
 use super::message::{Message, Screen};
 use super::state::{
-    mois_precedent, mois_suivant, AppState, Notification, ThemeMode, TransactionFormState,
+    mois_precedent, mois_suivant, update_pertinente, AppState, Notification, ThemeMode,
+    TransactionFormState, UpdateInfo,
 };
 
 /// Fonction principale de mise à jour de l'état
@@ -808,6 +813,110 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         }
         Message::CancelReset => {
             state.show_reset_confirm = false;
+            Task::none()
+        }
+
+        // ---- Mise à jour ----
+        Message::CheckForUpdates => {
+            if state.update_info.is_some() {
+                return Task::none();
+            }
+            Task::perform(maj_client::derniere_release(), Message::UpdateCheckResult)
+        }
+        Message::UpdateCheckResult(resultat) => {
+            let Some(release) = resultat.ok().flatten() else {
+                // Hors ligne, aucune release, ou réponse inattendue : on ne
+                // dérange pas l'utilisateur, la vérification est purement
+                // informative.
+                return Task::none();
+            };
+            let ignoree = state
+                .settings
+                .as_ref()
+                .and_then(|s| s.ignored_update_version.clone());
+            if !update_pertinente(&Version::from_cargo(), &release.version, ignoree.as_deref()) {
+                return Task::none();
+            }
+            let asset = plateforme::extension_installeur().and_then(|extension| {
+                release
+                    .assets
+                    .iter()
+                    .find(|asset| asset.nom.ends_with(&format!(".{extension}")))
+                    .cloned()
+            });
+            state.update_info = Some(UpdateInfo {
+                version: release.version,
+                url_page: release.url_page,
+                asset,
+            });
+            Task::none()
+        }
+        Message::DownloadUpdate => {
+            let Some(info) = state.update_info.clone() else {
+                return Task::none();
+            };
+            let Some(asset) = info.asset else {
+                // Aucun asset pour ce système : on ouvre la page de release.
+                if let Err(e) = ouvrir_lien(&info.url_page) {
+                    state.notification = Some(Notification::erreur(format!(
+                        "Impossible d'ouvrir la page de la release : {e}"
+                    )));
+                }
+                return Task::none();
+            };
+            state.update_downloading = true;
+            Task::perform(
+                async move {
+                    maj_telechargement::telecharger_installeur(&asset.url, &asset.nom).await
+                },
+                Message::DownloadResult,
+            )
+        }
+        Message::DownloadResult(resultat) => {
+            match resultat {
+                Ok(chemin) => {
+                    state.update_downloading = false;
+                    let nom = chemin
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "installeur".to_string());
+                    match maj_telechargement::ouvrir_fichier(&chemin) {
+                        Ok(()) => {
+                            state.update_info = None;
+                            state.notification = Some(Notification::succes(format!(
+                                "Téléchargé : {nom}. Lancement de l'installation."
+                            )));
+                        }
+                        Err(e) => {
+                            state.notification = Some(Notification::erreur(format!(
+                                "Téléchargé ({nom}), mais lancement impossible : {e}"
+                            )));
+                        }
+                    }
+                }
+                Err(e) => {
+                    state.update_downloading = false;
+                    state.notification = Some(Notification::erreur(format!(
+                        "Mise à jour impossible : {e}"
+                    )));
+                }
+            }
+            Task::none()
+        }
+        Message::IgnoreUpdate => {
+            if let (Some(info), Some(db)) = (state.update_info.clone(), state.db.as_ref()) {
+                if let Err(e) = parametres_service::mettre_a_jour_version_ignoree(
+                    db,
+                    &info.version.to_string(),
+                ) {
+                    state.notification = Some(Notification::erreur(format!(
+                        "Version non mémorisée : {e}"
+                    )));
+                    return Task::none();
+                }
+                state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+            }
+            state.update_info = None;
             Task::none()
         }
 
