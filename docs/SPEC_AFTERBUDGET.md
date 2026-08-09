@@ -2062,44 +2062,7 @@ Elle est importée sur un autre système pris en charge.
 
 ---
 
-## 24. Données de démonstration
-
-En environnement de développement uniquement :
-
-```text
-Solde actuel : -360 €
-Découvert autorisé : 500 €
-
-Revenu :
-- Salaire
-- 1 207 €
-- En attente
-
-Dépenses :
-- Loyer
-- 850 €
-- En attente
-
-- Courses
-- 120 €
-- En attente
-
-- Assurance
-- 155 €
-- En attente
-
-- Énergie
-- 200 €
-- En attente
-```
-
-Ces données permettent de vérifier rapidement l’affichage du statut `Attention`.
-
-Aucune donnée de démonstration ne doit être créée automatiquement dans une installation de production.
-
----
-
-## 25. Plan de réalisation proposé
+## 24. Plan de réalisation proposé
 
 ### Phase 1 — Fondation
 
@@ -2158,7 +2121,7 @@ Aucune donnée de démonstration ne doit être créée automatiquement dans une 
 
 ---
 
-## 26. Décisions à confirmer avant implémentation
+## 25. Décisions à confirmer avant implémentation
 
 Les points suivants ne sont pas entièrement définis par la présentation actuelle du produit et doivent être validés :
 
@@ -2186,7 +2149,7 @@ Les points suivants ne sont pas entièrement définis par la présentation actue
 
 ---
 
-## 27. Définition de « terminé »
+## 26. Définition de « terminé »
 
 Une fonctionnalité est terminée lorsque :
 
@@ -2203,7 +2166,7 @@ Une fonctionnalité est terminée lorsque :
 
 ---
 
-## 28. Résumé du MVP
+## 27. Résumé du MVP
 
 AfterBudget doit permettre à un utilisateur de :
 
