@@ -123,6 +123,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::UpdateBalance => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             // Un solde de compte peut être négatif : on peut déjà être à
             // découvert. Seule la lisibilité de la valeur est exigée.
             let balance = match Money::from_input(&state.settings_balance_str) {
@@ -161,6 +164,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::UpdateOverdraft => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let overdraft = match Money::from_input(&state.settings_overdraft_str) {
                 Ok(m) => {
                     if m.cents < 0 {
@@ -201,6 +207,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         Message::SetTheme(theme) => appliquer_theme(state, ThemeMode::depuis_cle(&theme)),
         Message::ToggleTheme => appliquer_theme(state, state.theme_mode.inverse()),
         Message::SetCurrency(cur) => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let Some(db) = state.db.as_ref() else {
                 return Task::none();
             };
@@ -371,6 +380,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::DeleteRecurringRule(identifiant) => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let Some(db) = state.db.as_ref() else {
                 return Task::none();
             };
@@ -395,6 +407,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::SubmitTransactionForm => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             if state.db.is_none() {
                 return Task::none();
             }
@@ -531,6 +546,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ConfirmDeleteTransaction => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let Some(tx) = state.delete_transaction.clone() else {
                 return Task::none();
             };
@@ -562,6 +580,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ToggleTransactionStatus(id) => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             let Some(db) = state.db.as_ref() else {
                 return Task::none();
             };
@@ -654,19 +675,12 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 .add_filter("Base SQLite", &["sqlite", "db"])
                 .pick_file();
 
+            // La validation complète se fait dans la tâche de fond : elle ne
+            // doit pas bloquer le thread UI (AB-011).
             if let Some(path) = file {
-                let path_str = path.to_string_lossy().to_string();
-
-                match io_cmd::valider_import(&path) {
-                    Ok(()) => {
-                        state.import_file_path = Some(path_str);
-                        state.show_import_confirm = true;
-                        state.import_error = None;
-                    }
-                    Err(e) => {
-                        state.import_error = Some(e);
-                    }
-                }
+                state.import_file_path = Some(path.to_string_lossy().to_string());
+                state.show_import_confirm = true;
+                state.import_error = None;
             }
             Task::none()
         }
@@ -677,6 +691,10 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 return Task::none();
             };
 
+            // Garde d'écriture : dès le lancement, toute mutation est refusée
+            // jusqu'à ce que le fichier soit réouvert (AB-003).
+            state.import_en_cours = true;
+
             Task::perform(
                 async move { io_cmd::importer_en_arriere_plan(chemin_actuel, source) },
                 Message::ImportResult,
@@ -685,6 +703,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         Message::ImportResult(resultat) => {
             state.show_import_confirm = false;
             state.import_file_path = None;
+            state.import_en_cours = false;
 
             // Réouverture systématique : la connexion vivante peut pointer
             // vers un inode remplacé par l'import ou la restauration.
@@ -698,6 +717,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             match (resultat, reouverture) {
                 (Ok(()), Ok(pool)) => {
                     state.db = Some(pool);
+                    state.import_error = None;
                     match state.load_data() {
                         Ok(()) => state.notification = Some(Notification::succes("Import réussi.")),
                         Err(e) => {
@@ -708,6 +728,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                     }
                 }
                 (Ok(()), Err(e)) => {
+                    state.import_error = None;
                     state.notification = Some(Notification::erreur(format!(
                         "Import effectué, mais réouverture impossible : {e}"
                     )));
@@ -740,6 +761,9 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ConfirmResetData => {
+            if refuser_si_import_en_cours(state) {
+                return Task::none();
+            }
             state.show_reset_confirm = false;
 
             let efface = match state.db {
@@ -860,6 +884,9 @@ pub fn montant_editable(montant: Money) -> String {
 
 /// Applique et persiste un mode de thème.
 fn appliquer_theme(state: &mut AppState, mode: ThemeMode) -> Task<Message> {
+    if refuser_si_import_en_cours(state) {
+        return Task::none();
+    }
     state.theme_mode = mode;
     let Some(db) = state.db.as_ref() else {
         return Task::none();
@@ -875,4 +902,17 @@ fn appliquer_theme(state: &mut AppState, mode: ThemeMode) -> Task<Message> {
 /// Place le focus clavier sur un champ identifié.
 fn focaliser(identifiant: &'static str) -> Task<Message> {
     iced::widget::text_input::focus(iced::widget::text_input::Id::new(identifiant))
+}
+
+/// Refuse une mutation pendant qu'un import remplace la base en arrière-plan :
+/// la connexion courante peut pointer vers un inode remplacé, et l'écriture
+/// serait silencieusement perdue (AB-003). Vrai si la mutation est refusée.
+fn refuser_si_import_en_cours(state: &mut AppState) -> bool {
+    if state.import_en_cours {
+        state.notification = Some(Notification::erreur(
+            "Import en cours : modification temporairement impossible.",
+        ));
+        return true;
+    }
+    false
 }

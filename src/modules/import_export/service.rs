@@ -88,8 +88,9 @@ pub fn importer_en_arriere_plan(chemin_actuel: PathBuf, source: PathBuf) -> Resu
         .parent()
         .ok_or("Chemin de base invalide.")?
         .join(format!(
-            "afterbudget-pre-import-{}.sqlite",
-            chrono::Utc::now().format("%Y%m%d-%H%M%S")
+            "afterbudget-pre-import-{}-{}.sqlite",
+            chrono::Utc::now().format("%Y%m%d-%H%M%S"),
+            uuid::Uuid::new_v4()
         ));
 
     let pool = DatabasePool::open(&chemin_actuel)?;
@@ -135,17 +136,26 @@ fn remplacer_fichier(destination: &Path, source: &Path) -> Result<(), String> {
         uuid::Uuid::new_v4()
     ));
 
-    std::fs::copy(source, &temporaire).map_err(|e| format!("Copie du fichier impossible : {e}"))?;
+    std::fs::copy(source, &temporaire).map_err(|e| {
+        let _ = std::fs::remove_file(&temporaire);
+        format!("Copie du fichier impossible : {e}")
+    })?;
 
     let fichier = std::fs::File::open(&temporaire)
         .map_err(|e| format!("Ouverture du fichier temporaire : {e}"))?;
-    fichier
+    let synchronise = fichier
         .sync_all()
-        .map_err(|e| format!("Synchronisation impossible : {e}"))?;
+        .map_err(|e| format!("Synchronisation impossible : {e}"));
     drop(fichier);
+    if let Err(e) = synchronise {
+        let _ = std::fs::remove_file(&temporaire);
+        return Err(e);
+    }
 
-    std::fs::rename(&temporaire, destination)
-        .map_err(|e| format!("Remplacement du fichier impossible : {e}"))?;
+    std::fs::rename(&temporaire, destination).map_err(|e| {
+        let _ = std::fs::remove_file(&temporaire);
+        format!("Remplacement du fichier impossible : {e}")
+    })?;
     Ok(())
 }
 

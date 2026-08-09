@@ -173,6 +173,9 @@ pub struct AppState {
     pub show_import_confirm: bool,
     pub import_file_path: Option<String>,
     pub import_error: Option<String>,
+    /// Un import remplace le fichier de base en arrière-plan : les écritures
+    /// sont refusées tant qu'il est en cours (AB-003).
+    pub import_en_cours: bool,
 
     pub show_reset_confirm: bool,
 
@@ -228,6 +231,7 @@ impl AppState {
             show_import_confirm: false,
             import_file_path: None,
             import_error: None,
+            import_en_cours: false,
             show_reset_confirm: false,
             monthly_statistics: None,
             previous_statistics: None,
@@ -483,5 +487,18 @@ mod tests {
         assert!(notification.restant > 0);
         assert_eq!(notification.ton, Ton::Succes);
         assert_eq!(Notification::erreur("Raté.").ton, Ton::Danger);
+    }
+
+    /// Le garde d'écriture d'import est éteint par défaut et reste modifiable.
+    #[test]
+    fn le_garde_dimport_part_eteint_et_est_modifiable() {
+        let mut etat = AppState::new();
+        assert!(
+            !etat.import_en_cours,
+            "aucun import n'est en cours au démarrage"
+        );
+        etat.import_en_cours = true;
+        assert!(etat.import_en_cours, "le champ doit être modifiable");
+        etat.import_en_cours = false;
     }
 }
