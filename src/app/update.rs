@@ -777,8 +777,17 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                     state.screen = Screen::Onboarding;
                     state.onboarding_balance_str.clear();
                     state.onboarding_overdraft_str.clear();
-                    state.load_data().ok();
-                    state.notification = Some(Notification::succes("Données réinitialisées."));
+                    match state.load_data() {
+                        Ok(()) => {
+                            state.notification =
+                                Some(Notification::succes("Données réinitialisées."));
+                        }
+                        Err(e) => {
+                            state.notification = Some(Notification::erreur(format!(
+                                "Données réinitialisées, mais rechargement impossible : {e}"
+                            )));
+                        }
+                    }
                 }
                 Err(e) => {
                     state.notification = Some(Notification::erreur(format!(

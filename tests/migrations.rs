@@ -94,8 +94,3 @@ fn une_base_interrompue_entre_alter_et_version_est_reparable() {
         .unwrap();
     assert_eq!(colonnes, 1);
 }
-
-#[test]
-fn une_migration_qui_echoue_ne_laisse_rien_derriere() {
-    // Test unitaire du mécanisme transactionnel, dans le module migrations.
-}

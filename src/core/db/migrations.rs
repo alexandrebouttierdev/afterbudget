@@ -41,6 +41,8 @@ fn appliquer_migration(
     nom: &str,
     m: &MigrationFn,
 ) -> Result<(), String> {
+    // Aucun appelant n'ouvre de transaction autour de run_migrations : une
+    // transaction imbriquée est donc impossible, `unchecked` est sûr.
     let tx = conn
         .unchecked_transaction()
         .map_err(|e| format!("Démarrage de la transaction v{v} : {e}"))?;
@@ -100,6 +102,9 @@ fn migration_v3(tx: &rusqlite::Transaction) -> Result<(), String> {
 /// Vrai si une colonne existe déjà dans une table : sert à rendre les ALTER
 /// idempotents (AB-007).
 fn colonne_existe(tx: &rusqlite::Transaction, table: &str, colonne: &str) -> Result<bool, String> {
+    // `table` est toujours un nom de table interne (transactions,
+    // app_settings) : jamais une entrée utilisateur, l'interpolation est sans
+    // risque d'injection SQL.
     let mut stmt = tx
         .prepare(&format!("PRAGMA table_info({table})"))
         .map_err(|e| format!("Lecture du schéma de {table} : {e}"))?;

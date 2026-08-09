@@ -145,7 +145,11 @@ pub fn ecart_relatif(actuel: Money, reference: Money) -> Option<f64> {
     if reference.cents == 0 {
         return None;
     }
-    Some((actuel.cents - reference.cents) as f64 / reference.cents.abs() as f64 * 100.0)
+    Some(
+        actuel.cents.saturating_sub(reference.cents) as f64
+            / reference.cents.saturating_abs() as f64
+            * 100.0,
+    )
 }
 
 /// Libellé d'une comparaison de dépenses avec le mois précédent.
