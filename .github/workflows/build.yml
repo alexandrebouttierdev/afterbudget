@@ -339,8 +339,16 @@ jobs:
             #   release reste la « latest » de GitHub (tag semver) ;
             # - le nom versionné : référence immuable de la mise à jour en
             #   interne, retrouvé par l'application selon l'extension.
+            # `gh` nomme un asset d'après le basename du fichier (`file#label`
+            # ne définit qu'un label d'affichage) et GitHub rejette deux
+            # assets de même nom avec un 404 trompeur : on duplique donc le
+            # fichier pour obtenir un nom distinct.
             versionne="${base/latest/$VERSION}"
-            args+=( "$file#$base" "$file#$versionne" )
+            args+=( "$file" )
+            if [ "$base" != "$versionne" ]; then
+              cp "$file" "builds/$versionne"
+              args+=( "builds/$versionne" )
+            fi
             echo "  asset : $base + $versionne"
           done
           gh release create "$TAG" "${args[@]}" --title "AfterBudget $VERSION" \
