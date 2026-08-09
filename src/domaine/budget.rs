@@ -73,7 +73,7 @@ impl BudgetSummary {
 
         let financial_status = if projected_balance >= Money::ZERO {
             FinancialStatus::Healthy
-        } else if projected_balance >= Money::from_cents(-overdraft_limit.cents) {
+        } else if projected_balance >= Money::from_cents(overdraft_limit.cents.saturating_neg()) {
             FinancialStatus::Warning
         } else {
             FinancialStatus::Danger
@@ -119,7 +119,7 @@ impl BudgetSummary {
     pub fn decouvert_utilise(&self) -> Money {
         if self.projected_balance.is_negative() {
             Money::from_cents(
-                (-self.projected_balance.cents).min(self.overdraft_limit.cents),
+                self.projected_balance.cents.saturating_neg().min(self.overdraft_limit.cents),
             )
         } else {
             Money::ZERO
@@ -128,7 +128,7 @@ impl BudgetSummary {
 
     /// Montant dépassant le découvert autorisé. Nul tant qu'on reste dedans.
     pub fn depassement_du_decouvert(&self) -> Money {
-        Money::from_cents((-self.remaining_overdraft_margin.cents).max(0))
+        Money::from_cents(self.remaining_overdraft_margin.cents.saturating_neg().max(0))
     }
 }
 

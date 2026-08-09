@@ -315,8 +315,10 @@ mod tests {
     fn laffichage_ne_panique_pas_sur_min() {
         let m = Money::from_cents(i64::MIN);
         let s = m.format_fr();
-        assert!(s.contains(','));
-        assert!(s.contains('€'));
+        assert_eq!(
+            s,
+            "-92\u{00a0}233\u{00a0}720\u{00a0}368\u{00a0}547\u{00a0}758,08\u{00a0}€"
+        );
     }
 
     #[test]
