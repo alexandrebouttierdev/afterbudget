@@ -80,16 +80,23 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 devise: state.onboarding_currency.clone(),
             };
 
-            if let Some(ref db) = state.db {
-                match onboarding_cmd::terminer(db, &dto) {
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+            match onboarding_cmd::terminer(db, &dto) {
+                Ok(()) => match state.load_data() {
                     Ok(()) => {
-                        state.load_data().ok();
                         state.notification =
                             Some(Notification::succes("Bienvenue dans AfterBudget !"));
                     }
                     Err(e) => {
-                        state.onboarding_error = Some(e);
+                        state.notification = Some(Notification::erreur(format!(
+                            "Paramètres enregistrés, mais rechargement impossible : {e}"
+                        )));
                     }
+                },
+                Err(e) => {
+                    state.onboarding_error = Some(e);
                 }
             }
             Task::none()
@@ -128,11 +135,23 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 }
             };
 
-            if let Some(ref db) = state.db {
-                let _ = parametres_service::mettre_a_jour_solde(db, balance);
-                state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+            if let Err(e) = parametres_service::mettre_a_jour_solde(db, balance) {
+                state.notification =
+                    Some(Notification::erreur(format!("Solde non enregistré : {e}")));
+                return Task::none();
             }
-            state.load_month_data().ok();
+            state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+
+            if let Err(e) = state.load_month_data() {
+                state.notification = Some(Notification::erreur(format!(
+                    "Solde enregistré, mais rechargement impossible : {e}"
+                )));
+                return Task::none();
+            }
+
             state.notification = Some(Notification::succes("Solde mis à jour."));
             state.settings_balance_str.clear();
             state.edition_solde_ouverte = false;
@@ -159,28 +178,47 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 }
             };
 
-            if let Some(ref db) = state.db {
-                let _ = parametres_service::mettre_a_jour_decouvert(db, overdraft);
-                state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+            if let Err(e) = parametres_service::mettre_a_jour_decouvert(db, overdraft) {
+                state.notification =
+                    Some(Notification::erreur(format!("Découvert non enregistré : {e}")));
+                return Task::none();
             }
-            state.load_month_data().ok();
+            state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+
+            if let Err(e) = state.load_month_data() {
+                state.notification = Some(Notification::erreur(format!(
+                    "Découvert enregistré, mais rechargement impossible : {e}"
+                )));
+                return Task::none();
+            }
+
             state.notification = Some(Notification::succes("Découvert mis à jour."));
             state.settings_overdraft_str.clear();
             Task::none()
         }
-        Message::SetTheme(theme) => {
-            appliquer_theme(state, ThemeMode::depuis_cle(&theme));
-            Task::none()
-        }
-        Message::ToggleTheme => {
-            appliquer_theme(state, state.theme_mode.inverse());
-            Task::none()
-        }
+        Message::SetTheme(theme) => appliquer_theme(state, ThemeMode::depuis_cle(&theme)),
+        Message::ToggleTheme => appliquer_theme(state, state.theme_mode.inverse()),
         Message::SetCurrency(cur) => {
-            if let Some(ref db) = state.db {
-                let _ = parametres_service::mettre_a_jour_devise(db, &cur);
-                state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+            if let Err(e) = parametres_service::mettre_a_jour_devise(db, &cur) {
+                state.notification =
+                    Some(Notification::erreur(format!("Devise non enregistrée : {e}")));
+                return Task::none();
             }
+            state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
+
+            if let Err(e) = state.load_month_data() {
+                state.notification = Some(Notification::erreur(format!(
+                    "Devise enregistrée, mais rechargement impossible : {e}"
+                )));
+                return Task::none();
+            }
+
             state.notification = Some(Notification::succes(format!("Devise changée pour {cur}.")));
             Task::none()
         }
@@ -333,21 +371,27 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::DeleteRecurringRule(identifiant) => {
-            if let Some(ref db) = state.db {
-                match recurrences_cmd::supprimer(db, &identifiant) {
-                    Ok(()) => {
-                        state.notification = Some(Notification::succes(
-                            "Récurrence supprimée. Les occurrences déjà créées sont conservées.",
-                        ));
-                    }
-                    Err(e) => {
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+            match recurrences_cmd::supprimer(db, &identifiant) {
+                Ok(()) => {
+                    if let Err(e) = state.load_data() {
                         state.notification = Some(Notification::erreur(format!(
-                            "Suppression impossible : {e}"
+                            "Récurrence supprimée, mais rechargement impossible : {e}"
                         )));
+                        return Task::none();
                     }
+                    state.notification = Some(Notification::succes(
+                        "Récurrence supprimée. Les occurrences déjà créées sont conservées.",
+                    ));
+                }
+                Err(e) => {
+                    state.notification = Some(Notification::erreur(format!(
+                        "Suppression impossible : {e}"
+                    )));
                 }
             }
-            state.load_data().ok();
             Task::none()
         }
         Message::SubmitTransactionForm => {
@@ -402,7 +446,12 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                     Ok(regle) => {
                         state.show_transaction_form = false;
                         state.transaction_form = TransactionFormState::default();
-                        state.load_data().ok();
+                        if let Err(e) = state.load_data() {
+                            state.notification = Some(Notification::erreur(format!(
+                                "Récurrence créée, mais rechargement impossible : {e}"
+                            )));
+                            return Task::none();
+                        }
                         state.notification = Some(Notification::succes(format!(
                             "Récurrence créée : {}.",
                             regle.periodicite().to_lowercase()
@@ -446,7 +495,12 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 Ok(()) => {
                     state.show_transaction_form = false;
                     state.transaction_form = TransactionFormState::default();
-                    state.load_month_data().ok();
+                    if let Err(e) = state.load_month_data() {
+                        state.notification = Some(Notification::erreur(format!(
+                            "Transaction enregistrée, mais rechargement impossible : {e}"
+                        )));
+                        return Task::none();
+                    }
                     let msg = if was_edit {
                         "Transaction modifiée."
                     } else {
@@ -477,15 +531,28 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ConfirmDeleteTransaction => {
-            if let Some(ref tx) = state.delete_transaction {
-                if let Some(ref db) = state.db {
-                    let _ = tx_cmd::supprimer(db, &tx.id);
-                }
-                state.delete_transaction = None;
-                state.show_delete_confirm = false;
-                state.load_month_data().ok();
-                state.notification = Some(Notification::succes("Transaction supprimée."));
+            let Some(tx) = state.delete_transaction.clone() else {
+                return Task::none();
+            };
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+
+            if let Err(e) = tx_cmd::supprimer(db, &tx.id) {
+                state.notification =
+                    Some(Notification::erreur(format!("Suppression impossible : {e}")));
+                return Task::none();
             }
+            state.delete_transaction = None;
+            state.show_delete_confirm = false;
+
+            if let Err(e) = state.load_month_data() {
+                state.notification = Some(Notification::erreur(format!(
+                    "Suppression enregistrée, mais rechargement impossible : {e}"
+                )));
+                return Task::none();
+            }
+            state.notification = Some(Notification::succes("Transaction supprimée."));
             Task::none()
         }
         Message::CancelDelete => {
@@ -494,11 +561,21 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             Task::none()
         }
         Message::ToggleTransactionStatus(id) => {
-            if let Some(ref db) = state.db {
-                let _ = tx_cmd::changer_statut(db, &id);
-                state.load_month_data().ok();
-                state.notification = Some(Notification::succes("Statut modifié."));
+            let Some(db) = state.db.as_ref() else {
+                return Task::none();
+            };
+            if let Err(e) = tx_cmd::changer_statut(db, &id) {
+                state.notification =
+                    Some(Notification::erreur(format!("Statut non modifié : {e}")));
+                return Task::none();
             }
+            if let Err(e) = state.load_month_data() {
+                state.notification = Some(Notification::erreur(format!(
+                    "Statut modifié, mais rechargement impossible : {e}"
+                )));
+                return Task::none();
+            }
+            state.notification = Some(Notification::succes("Statut modifié."));
             Task::none()
         }
 
@@ -550,9 +627,23 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
 
                 match io_cmd::exporter(db, &dest_path) {
                     Ok(()) => {
-                        if let Ok(Some(mut s)) = params_repo::get_settings(db) {
+                        let relu = match params_repo::get_settings(db) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                state.notification = Some(Notification::erreur(format!(
+                                    "Relecture des paramètres impossible : {e}"
+                                )));
+                                return Task::none();
+                            }
+                        };
+                        if let Some(mut s) = relu {
                             s.last_export_date = Some(chrono::Utc::now().to_rfc3339());
-                            let _ = params_repo::update_settings(db, &s);
+                            if let Err(e) = params_repo::update_settings(db, &s) {
+                                state.notification = Some(Notification::erreur(format!(
+                                    "Export réussi, mais mémorisation de la date impossible : {e}"
+                                )));
+                                return Task::none();
+                            }
                             state.settings = Some(s);
                         }
                         state.notification = Some(Notification::succes(format!(
@@ -744,12 +835,18 @@ pub fn montant_editable(montant: Money) -> String {
 }
 
 /// Applique et persiste un mode de thème.
-fn appliquer_theme(state: &mut AppState, mode: ThemeMode) {
+fn appliquer_theme(state: &mut AppState, mode: ThemeMode) -> Task<Message> {
     state.theme_mode = mode;
-    if let Some(ref db) = state.db {
-        let _ = parametres_service::mettre_a_jour_theme(db, mode.cle());
+    let Some(db) = state.db.as_ref() else {
+        return Task::none();
+    };
+    if let Err(e) = parametres_service::mettre_a_jour_theme(db, mode.cle()) {
+        state.notification =
+            Some(Notification::erreur(format!("Thème non enregistré : {e}")));
+    } else {
         state.settings = parametres_service::obtenir_parametres(db).ok().flatten();
     }
+    Task::none()
 }
 
 /// Place le focus clavier sur un champ identifié.

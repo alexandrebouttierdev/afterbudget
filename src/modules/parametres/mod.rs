@@ -6,3 +6,6 @@ pub mod repository;
 pub mod service;
 pub mod validateurs;
 pub mod views;
+
+#[cfg(test)]
+mod tests;
