@@ -6,7 +6,6 @@ use crate::domaine::transaction::TransactionKind;
 use crate::modules::import_export::commandes as io_cmd;
 use crate::modules::onboarding::commandes as onboarding_cmd;
 use crate::modules::onboarding::dtos::TerminerOnboardingDto;
-use crate::modules::parametres::repository as params_repo;
 use crate::modules::parametres::service as parametres_service;
 use crate::modules::recurrences::commandes as recurrences_cmd;
 use crate::modules::recurrences::dtos::CreerRecurrenceDto;
@@ -739,7 +738,7 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
             state.show_reset_confirm = false;
 
             let efface = match state.db {
-                Some(ref db) => params_repo::reset_all_data(db),
+                Some(ref db) => parametres_service::reset_all_data(db),
                 None => Err("Base de données non initialisée.".to_string()),
             };
 

@@ -3,6 +3,10 @@ use crate::domaine::argent::Money;
 use crate::domaine::parametres::AppSettings;
 use crate::modules::parametres::repository as repo;
 
+pub fn reset_all_data(pool: &DatabasePool) -> Result<(), String> {
+    repo::reset_all_data(pool)
+}
+
 pub fn obtenir_parametres(pool: &DatabasePool) -> Result<Option<AppSettings>, String> {
     repo::get_settings(pool)
 }
