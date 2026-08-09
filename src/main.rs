@@ -65,7 +65,9 @@ pub fn main() -> iced::Result {
         // du design system, aucun widget ne retombe sur les couleurs par défaut.
         .theme(|_state: &AppState| iced::Theme::Light)
         .subscription(souscriptions)
-        .run_with(|| (state, iced::Task::none()))
+        // La première tâche déclenche la vérification de mise à jour : elle ne
+        // bloque ni le rendu ni la saisie, et son échec reste silencieux.
+        .run_with(|| (state, iced::Task::done(Message::CheckForUpdates)))
 }
 
 fn souscriptions(_state: &AppState) -> Subscription<Message> {
