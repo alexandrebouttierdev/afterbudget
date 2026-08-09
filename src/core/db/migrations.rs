@@ -3,7 +3,7 @@ use rusqlite::params;
 
 /// Dernière version de schéma produite par cette application. Le validateur
 /// d'import s'en sert pour accepter ou refuser un fichier (AB-002).
-pub const VERSION_COURANTE: i64 = 3;
+pub const VERSION_COURANTE: i64 = 4;
 
 type MigrationFn = Box<dyn Fn(&rusqlite::Transaction) -> Result<(), String>>;
 
@@ -22,6 +22,7 @@ pub fn run_migrations(conn: &rusqlite::Connection) -> Result<(), String> {
         (1, "v1", Box::new(migration_v1)),
         (2, "v2", Box::new(migration_v2)),
         (3, "v3", Box::new(migration_v3)),
+        (4, "v4", Box::new(migration_v4)),
     ];
 
     for (v, nom, m) in migrations {
@@ -95,6 +96,16 @@ fn migration_v3(tx: &rusqlite::Transaction) -> Result<(), String> {
             "../../../migrations/0003_last_export_date.sql"
         ))
         .map_err(|e| format!("Erreur migration v3 : {}", e))?;
+    }
+    Ok(())
+}
+
+fn migration_v4(tx: &rusqlite::Transaction) -> Result<(), String> {
+    if !colonne_existe(tx, "app_settings", "ignored_update_version")? {
+        tx.execute_batch(include_str!(
+            "../../../migrations/0004_ignored_update_version.sql"
+        ))
+        .map_err(|e| format!("Erreur migration v4 : {}", e))?;
     }
     Ok(())
 }

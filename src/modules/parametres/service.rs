@@ -17,6 +17,12 @@ pub fn marquer_dernier_export(pool: &DatabasePool) -> Result<(), String> {
     repo::update_settings(pool, &settings)
 }
 
+pub fn mettre_a_jour_version_ignoree(pool: &DatabasePool, version: &str) -> Result<(), String> {
+    let mut settings = repo::get_settings(pool)?.unwrap_or_default();
+    settings.ignored_update_version = Some(version.to_string());
+    repo::update_settings(pool, &settings)
+}
+
 pub fn mettre_a_jour_solde(pool: &DatabasePool, solde: Money) -> Result<(), String> {
     let mut settings = repo::get_settings(pool)?.unwrap_or_default();
     settings.current_balance = solde;
@@ -58,6 +64,7 @@ pub fn terminer_onboarding(
         balance_updated_at: now.clone(),
         onboarding_completed: true,
         last_export_date: None,
+        ignored_update_version: None,
     };
     if repo::get_settings(pool)?.is_some() {
         repo::update_settings(pool, &settings)

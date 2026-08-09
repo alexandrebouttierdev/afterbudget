@@ -7,7 +7,8 @@ use crate::domaine::parametres::AppSettings;
 pub fn get_settings(pool: &DatabasePool) -> Result<Option<AppSettings>, String> {
     let result = pool.conn.query_row(
         "SELECT id, current_balance_cents, overdraft_limit_cents, currency_code, locale, theme,
-                balance_updated_at, onboarding_completed, created_at, updated_at, last_export_date
+                balance_updated_at, onboarding_completed, created_at, updated_at, last_export_date,
+                ignored_update_version
          FROM app_settings WHERE id = 1",
         [],
         |row| {
@@ -23,6 +24,7 @@ pub fn get_settings(pool: &DatabasePool) -> Result<Option<AppSettings>, String> 
                 created_at: row.get(8)?,
                 updated_at: row.get(9)?,
                 last_export_date: row.get(10)?,
+                ignored_update_version: row.get(11)?,
             })
         },
     );
@@ -39,8 +41,8 @@ pub fn insert_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
     pool.conn
         .execute(
             "INSERT INTO app_settings (id, current_balance_cents, overdraft_limit_cents, currency_code, locale, theme,
-             balance_updated_at, onboarding_completed, last_export_date, created_at, updated_at)
-             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
+             balance_updated_at, onboarding_completed, last_export_date, ignored_update_version, created_at, updated_at)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
             params![
                 s.current_balance.cents,
                 s.overdraft_limit.cents,
@@ -50,6 +52,7 @@ pub fn insert_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
                 s.balance_updated_at,
                 s.onboarding_completed as i32,
                 s.last_export_date,
+                s.ignored_update_version,
                 &now,
             ],
         )
@@ -64,7 +67,8 @@ pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
         .execute(
             "UPDATE app_settings SET current_balance_cents = ?1, overdraft_limit_cents = ?2,
              currency_code = ?3, locale = ?4, theme = ?5, balance_updated_at = ?6,
-             onboarding_completed = ?7, last_export_date = ?8, updated_at = ?9
+             onboarding_completed = ?7, last_export_date = ?8, ignored_update_version = ?9,
+             updated_at = ?10
              WHERE id = 1",
             params![
                 s.current_balance.cents,
@@ -75,6 +79,7 @@ pub fn update_settings(pool: &DatabasePool, s: &AppSettings) -> Result<(), Strin
                 s.balance_updated_at,
                 s.onboarding_completed as i32,
                 s.last_export_date,
+                s.ignored_update_version,
                 &now,
             ],
         )
@@ -121,5 +126,6 @@ fn row_to_settings(row: &SettingsRow) -> AppSettings {
         balance_updated_at: row.balance_updated_at.clone(),
         onboarding_completed: row.onboarding_completed,
         last_export_date: row.last_export_date.clone(),
+        ignored_update_version: row.ignored_update_version.clone(),
     }
 }

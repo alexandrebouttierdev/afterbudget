@@ -37,4 +37,5 @@ pub struct SettingsRow {
     pub created_at: String,
     pub updated_at: String,
     pub last_export_date: Option<String>,
+    pub ignored_update_version: Option<String>,
 }
