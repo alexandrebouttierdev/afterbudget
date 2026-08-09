@@ -19,10 +19,16 @@ pub fn calculer_statistiques_mensuelles(
     let total_expenses = Money::from_cents(total_expenses_cents);
     let pending_income = Money::from_cents(pending_income_cents);
     let pending_expenses = Money::from_cents(pending_expenses_cents);
-    let completed_income = total_income - pending_income;
-    let completed_expenses = total_expenses - pending_expenses;
+    let completed_income = total_income
+        .checked_sub(pending_income)
+        .ok_or_else(|| "Dépassement de montant dans les statistiques.".to_string())?;
+    let completed_expenses = total_expenses
+        .checked_sub(pending_expenses)
+        .ok_or_else(|| "Dépassement de montant dans les statistiques.".to_string())?;
 
-    let balance = total_income - total_expenses;
+    let balance = total_income
+        .checked_sub(total_expenses)
+        .ok_or_else(|| "Dépassement de montant dans les statistiques.".to_string())?;
 
     let txs = transactions::find_by_month(pool, year, month, None, None, None, None)?;
 

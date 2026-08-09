@@ -11,8 +11,8 @@ use commun::{base_temporaire, donnees_test};
 
 fn setup_scenario(pool: &DatabasePool) {
     let settings = AppSettings {
-        current_balance: Money::from_euros(-360.0),
-        overdraft_limit: Money::from_euros(500.0),
+        current_balance: Money::from_cents(-36000),
+        overdraft_limit: Money::from_cents(50000),
         onboarding_completed: true,
         ..Default::default()
     };

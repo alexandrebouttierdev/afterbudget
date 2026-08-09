@@ -60,9 +60,16 @@ impl BudgetSummary {
         total_expenses: Money,
         completed_income: Money,
         completed_expenses: Money,
-    ) -> Self {
-        let projected_balance = current_balance + pending_income - pending_expenses;
-        let remaining_overdraft_margin = projected_balance + overdraft_limit;
+    ) -> Result<Self, String> {
+        let err = || "Dépassement de montant dans le calcul du budget.".to_string();
+        let projected_balance = current_balance
+            .checked_add(pending_income)
+            .ok_or_else(err)?
+            .checked_sub(pending_expenses)
+            .ok_or_else(err)?;
+        let remaining_overdraft_margin = projected_balance
+            .checked_add(overdraft_limit)
+            .ok_or_else(err)?;
 
         let financial_status = if projected_balance >= Money::ZERO {
             FinancialStatus::Healthy
@@ -72,7 +79,7 @@ impl BudgetSummary {
             FinancialStatus::Danger
         };
 
-        Self {
+        Ok(Self {
             current_balance,
             pending_income,
             pending_expenses,
@@ -84,7 +91,7 @@ impl BudgetSummary {
             total_expenses,
             completed_income,
             completed_expenses,
-        }
+        })
     }
 }
 
@@ -97,7 +104,12 @@ impl BudgetSummary {
     /// l'ampleur du dépassement est portée par `depassement_du_decouvert`.
     pub fn decouvert_restant(&self) -> Money {
         if self.projected_balance.is_negative() {
-            Money::from_cents((self.overdraft_limit.cents + self.projected_balance.cents).max(0))
+            Money::from_cents(
+                self.overdraft_limit
+                    .cents
+                    .saturating_add(self.projected_balance.cents)
+                    .max(0),
+            )
         } else {
             self.overdraft_limit
         }
@@ -106,7 +118,9 @@ impl BudgetSummary {
     /// Part du découvert autorisé qui serait consommée, plafonnée à la limite.
     pub fn decouvert_utilise(&self) -> Money {
         if self.projected_balance.is_negative() {
-            Money::from_cents((-self.projected_balance.cents).min(self.overdraft_limit.cents))
+            Money::from_cents(
+                (-self.projected_balance.cents).min(self.overdraft_limit.cents),
+            )
         } else {
             Money::ZERO
         }
@@ -151,15 +165,16 @@ mod tests {
     #[test]
     fn test_solde_positif() {
         let summary = BudgetSummary::compute(
-            Money::from_euros(300.0),  // solde actuel
-            Money::from_euros(200.0),  // découvert
-            Money::from_euros(1500.0), // revenus en attente
-            Money::from_euros(1200.0), // dépenses en attente
-            Money::from_euros(1500.0), // total revenus
-            Money::from_euros(1200.0), // total dépenses
-            Money::from_euros(0.0),    // complétés income
-            Money::from_euros(0.0),    // complétés expenses
-        );
+            Money::from_cents(30000), // solde actuel
+            Money::from_cents(20000), // découvert
+            Money::from_cents(150000), // revenus en attente
+            Money::from_cents(120000), // dépenses en attente
+            Money::from_cents(150000), // total revenus
+            Money::from_cents(120000), // total dépenses
+            Money::ZERO,               // complétés income
+            Money::ZERO,               // complétés expenses
+        )
+        .unwrap();
         assert_eq!(summary.projected_balance.cents, 60000); // 300 + 1500 - 1200 = 600
         assert_eq!(summary.financial_status, FinancialStatus::Healthy);
     }
@@ -167,15 +182,16 @@ mod tests {
     #[test]
     fn test_utilisation_decouvert() {
         let summary = BudgetSummary::compute(
-            Money::from_euros(-360.0),
-            Money::from_euros(500.0),
-            Money::from_euros(1207.0),
-            Money::from_euros(1325.0),
-            Money::from_euros(1207.0),
-            Money::from_euros(1325.0),
-            Money::from_euros(0.0),
-            Money::from_euros(0.0),
-        );
+            Money::from_cents(-36000),
+            Money::from_cents(50000),
+            Money::from_cents(120700),
+            Money::from_cents(132500),
+            Money::from_cents(120700),
+            Money::from_cents(132500),
+            Money::ZERO,
+            Money::ZERO,
+        )
+        .unwrap();
         assert_eq!(summary.projected_balance.cents, -47800); // -360 + 1207 - 1325 = -478
         assert_eq!(summary.financial_status, FinancialStatus::Warning);
         assert_eq!(summary.remaining_overdraft_margin.cents, 2200); // -478 + 500 = 22
@@ -184,15 +200,16 @@ mod tests {
     #[test]
     fn test_depassement_decouvert() {
         let summary = BudgetSummary::compute(
-            Money::from_euros(-400.0),
-            Money::from_euros(500.0),
-            Money::from_euros(200.0),
-            Money::from_euros(500.0),
-            Money::from_euros(200.0),
-            Money::from_euros(500.0),
-            Money::from_euros(0.0),
-            Money::from_euros(0.0),
-        );
+            Money::from_cents(-40000),
+            Money::from_cents(50000),
+            Money::from_cents(20000),
+            Money::from_cents(50000),
+            Money::from_cents(20000),
+            Money::from_cents(50000),
+            Money::ZERO,
+            Money::ZERO,
+        )
+        .unwrap();
         assert_eq!(summary.projected_balance.cents, -70000); // -400 + 200 - 500 = -700
         assert_eq!(summary.financial_status, FinancialStatus::Danger);
     }
@@ -208,7 +225,8 @@ mod tests {
             Money::ZERO,
             Money::ZERO,
             Money::ZERO,
-        );
+        )
+        .unwrap();
         assert_eq!(summary.projected_balance, Money::ZERO);
         assert_eq!(summary.financial_status, FinancialStatus::Healthy);
     }
@@ -224,6 +242,7 @@ mod tests {
             Money::ZERO,
             Money::ZERO,
         )
+        .unwrap()
     }
 
     /// Solde prévisionnel positif : tout le découvert reste disponible.
@@ -295,15 +314,16 @@ mod tests {
     #[test]
     fn test_exclusion_transactions_realisees() {
         let summary = BudgetSummary::compute(
-            Money::from_euros(100.0),
-            Money::from_euros(100.0),
-            Money::from_euros(0.0),
-            Money::from_euros(0.0),
-            Money::from_euros(500.0),
-            Money::from_euros(300.0),
-            Money::from_euros(500.0),
-            Money::from_euros(300.0),
-        );
+            Money::from_cents(10000),
+            Money::from_cents(10000),
+            Money::ZERO,
+            Money::ZERO,
+            Money::from_cents(50000),
+            Money::from_cents(30000),
+            Money::from_cents(50000),
+            Money::from_cents(30000),
+        )
+        .unwrap();
         assert_eq!(summary.projected_balance.cents, 10000);
     }
 }

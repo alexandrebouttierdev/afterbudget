@@ -1,5 +1,4 @@
 use std::fmt;
-use std::ops;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Money {
@@ -13,19 +12,14 @@ impl Money {
         Self { cents }
     }
 
-    pub fn from_euros(euros: f64) -> Self {
-        Self {
-            cents: (euros * 100.0).round() as i64,
-        }
-    }
-
-    pub fn to_euros_f64(self) -> f64 {
-        self.cents as f64 / 100.0
-    }
-
+    /// Parse une saisie monétaire française en centimes, sans aucune
+    /// conversion flottante (AB-005).
+    ///
+    /// Accepte un signe `-` en tête (un solde peut être négatif), des espaces
+    /// de milliers (ordinaires ou insécables) et un unique séparateur décimal
+    /// `,` ou `.`. Au-delà de deux décimales, la saisie est refusée — jamais
+    /// arrondie. Le débordement de `i64` est une erreur.
     pub fn from_input(s: &str) -> Result<Self, String> {
-        // Accepte les deux espaces insécables et l'espace ordinaire, afin de
-        // pouvoir recoller un montant précédemment affiché.
         let cleaned = s
             .replace(['\u{00a0}', '\u{202f}', ' '], "")
             .replace(',', ".");
@@ -35,19 +29,55 @@ impl Money {
             return Err("Le montant est obligatoire.".into());
         }
 
-        let value: f64 = trimmed
-            .parse()
-            .map_err(|_| format!("Montant invalide : « {} »", s))?;
-
-        if value.is_nan() || value.is_infinite() {
+        let (negatif, corps) = match trimmed.as_bytes()[0] {
+            b'-' => (true, &trimmed[1..]),
+            b'+' => (false, &trimmed[1..]),
+            _ => (false, trimmed),
+        };
+        if corps.is_empty() {
             return Err(format!("Montant invalide : « {} »", s));
         }
 
-        if !(-900_000_000_000_000.0..=900_000_000_000_000.0).contains(&value) {
-            return Err("Le montant est trop grand.".into());
+        let (entiers, decimales) = match corps.split_once('.') {
+            Some((e, d)) => (e, d),
+            None => (corps, ""),
+        };
+        if !entiers.chars().all(|c| c.is_ascii_digit())
+            || !decimales.chars().all(|c| c.is_ascii_digit())
+        {
+            return Err(format!("Montant invalide : « {} »", s));
+        }
+        if decimales.len() > 2 {
+            return Err(format!("Montant invalide : « {} »", s));
         }
 
-        Ok(Self::from_euros(value))
+        let entiers: i64 = entiers
+            .parse()
+            .map_err(|_| "Le montant est trop grand.".to_string())?;
+        let decimales: i64 = if decimales.is_empty() {
+            0
+        } else if decimales.len() == 1 {
+            decimales.parse::<i64>().map_err(|_| "Le montant est trop grand.".to_string())? * 10
+        } else {
+            decimales.parse().map_err(|_| "Le montant est trop grand.".to_string())?
+        };
+
+        let centimes = if negatif {
+            // La partie entière est négativée d'abord : c'est la seule façon de
+            // représenter i64::MIN, dont la valeur absolue déborde i64.
+            entiers
+                .checked_neg()
+                .and_then(|v| v.checked_mul(100))
+                .and_then(|v| v.checked_sub(decimales))
+                .ok_or_else(|| "Le montant est trop grand.".to_string())?
+        } else {
+            entiers
+                .checked_mul(100)
+                .and_then(|v| v.checked_add(decimales))
+                .ok_or_else(|| "Le montant est trop grand.".to_string())?
+        };
+
+        Ok(Self { cents: centimes })
     }
 
     /// Filtre une frappe destinée à un champ montant.
@@ -99,7 +129,8 @@ impl Money {
     }
 
     pub fn format_fr(&self) -> String {
-        let abs_cents = self.cents.abs();
+        // unsigned_abs : jamais de panic sur i64::MIN (AB-005).
+        let abs_cents = self.cents.unsigned_abs();
         let euros_part = abs_cents / 100;
         let cents_part = abs_cents % 100;
 
@@ -145,9 +176,29 @@ impl Money {
         self.cents < 0
     }
 
+    /// Valeur absolue pour l'affichage : saturée, jamais de panic (AB-005).
     pub fn abs(&self) -> Self {
         Self {
-            cents: self.cents.abs(),
+            cents: self.cents.saturating_abs(),
+        }
+    }
+
+    pub fn checked_abs(self) -> Option<Self> {
+        self.cents.checked_abs().map(|cents| Self { cents })
+    }
+
+    pub fn checked_add(self, other: Self) -> Option<Self> {
+        self.cents.checked_add(other.cents).map(|cents| Self { cents })
+    }
+
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
+        self.cents.checked_sub(other.cents).map(|cents| Self { cents })
+    }
+
+    /// Addition saturée : utilisée uniquement pour des affichages de synthèse.
+    pub fn saturating_add(self, other: Self) -> Self {
+        Self {
+            cents: self.cents.saturating_add(other.cents),
         }
     }
 }
@@ -155,36 +206,6 @@ impl Money {
 impl fmt::Display for Money {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.format_fr())
-    }
-}
-
-impl ops::Add for Money {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            cents: self.cents + other.cents,
-        }
-    }
-}
-
-impl ops::AddAssign for Money {
-    fn add_assign(&mut self, other: Self) {
-        self.cents += other.cents;
-    }
-}
-
-impl ops::Sub for Money {
-    type Output = Self;
-    fn sub(self, other: Self) -> Self {
-        Self {
-            cents: self.cents - other.cents,
-        }
-    }
-}
-
-impl ops::SubAssign for Money {
-    fn sub_assign(&mut self, other: Self) {
-        self.cents -= other.cents;
     }
 }
 
@@ -199,9 +220,14 @@ mod tests {
     }
 
     #[test]
-    fn test_from_euros() {
-        let m = Money::from_euros(10.50);
-        assert_eq!(m.cents, 1050);
+    fn test_parsing_entier_exact() {
+        assert_eq!(Money::from_input("10").unwrap().cents, 1000);
+        assert_eq!(Money::from_input("10,50").unwrap().cents, 1050);
+        assert_eq!(Money::from_input("10.50").unwrap().cents, 1050);
+        assert_eq!(Money::from_input("-478").unwrap().cents, -47800);
+        assert_eq!(Money::from_input("1 207,50").unwrap().cents, 120750);
+        assert_eq!(Money::from_input("1\u{00a0}207,50").unwrap().cents, 120750);
+        assert_eq!(Money::from_input("1\u{202f}207,50").unwrap().cents, 120750);
     }
 
     #[test]
@@ -241,6 +267,58 @@ mod tests {
         assert_eq!(Money::from_input("1 207,50").unwrap(), montant);
     }
 
+    /// Trois décimales sont refusées : pas d'arrondi silencieux (AB-005).
+    #[test]
+    fn trois_decimales_sont_refusees() {
+        assert!(Money::from_input("12,345").is_err());
+        assert!(Money::from_input("12.345").is_err());
+    }
+
+    /// Les bornes i64 sont les bornes du contrat : dépassement refusé, pas de
+    /// wrap, pas de panic.
+    #[test]
+    fn les_bornes_i64_encadrent_le_montant() {
+        let max = "92233720368547758,07";
+        assert_eq!(
+            Money::from_input(max).unwrap().cents,
+            i64::MAX
+        );
+        let min = "-92233720368547758,08";
+        assert_eq!(
+            Money::from_input(min).unwrap().cents,
+            i64::MIN
+        );
+        assert!(Money::from_input("92233720368547758,08").is_err());
+        assert!(Money::from_input("-92233720368547758,09").is_err());
+    }
+
+    /// Un exposant scientifique n'est pas une saisie monétaire.
+    #[test]
+    fn une_saisie_scientifique_est_refusee() {
+        assert!(Money::from_input("1e5").is_err());
+    }
+
+    #[test]
+    fn laddition_verifiee_detecte_le_debordement() {
+        let a = Money::from_cents(i64::MAX);
+        assert_eq!(a.checked_add(Money::from_cents(1)), None);
+        assert_eq!(a.checked_add(Money::ZERO), Some(a));
+        let b = Money::from_cents(i64::MIN);
+        assert_eq!(b.checked_sub(Money::from_cents(1)), None);
+        assert_eq!(b.checked_abs(), None);
+        assert_eq!(Money::from_cents(-5).checked_abs(), Some(Money::from_cents(5)));
+    }
+
+    /// L'affichage ne doit jamais paniquer, même sur la valeur minimale
+    /// (l'abs littéral de i64::MIN est un débordement).
+    #[test]
+    fn laffichage_ne_panique_pas_sur_min() {
+        let m = Money::from_cents(i64::MIN);
+        let s = m.format_fr();
+        assert!(s.contains(','));
+        assert!(s.contains('€'));
+    }
+
     #[test]
     fn test_from_input_invalide() {
         assert!(Money::from_input("abc").is_err());
@@ -257,20 +335,6 @@ mod tests {
     fn test_format_fr_negatif() {
         let m = Money::from_cents(-47800);
         assert_eq!(m.format_fr(), "-478,00\u{00a0}€");
-    }
-
-    #[test]
-    fn test_addition() {
-        let a = Money::from_cents(1000);
-        let b = Money::from_cents(500);
-        assert_eq!((a + b).cents, 1500);
-    }
-
-    #[test]
-    fn test_soustraction() {
-        let a = Money::from_cents(1000);
-        let b = Money::from_cents(500);
-        assert_eq!((a - b).cents, 500);
     }
 
     #[test]

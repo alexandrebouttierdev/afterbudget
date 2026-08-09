@@ -92,7 +92,8 @@ fn total_affiche(state: &AppState, palette: Palette) -> Element<'_, Message> {
         return Space::new(0, 0).into();
     }
 
-    let total = crate::modules::transactions::service::solde_des(&state.transactions);
+    let total = crate::modules::transactions::service::solde_des(&state.transactions)
+        .unwrap_or(crate::domaine::argent::Money::ZERO);
     let couleur = if total.is_negative() {
         palette.depense
     } else {

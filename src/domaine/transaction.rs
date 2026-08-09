@@ -32,10 +32,14 @@ impl TransactionKind {
         }
     }
 
-    pub fn apply_to_balance(&self, balance: Money, amount: Money) -> Money {
+    pub fn apply_to_balance(&self, balance: Money, amount: Money) -> Result<Money, String> {
         match self {
-            Self::Income => balance + amount,
-            Self::Expense => balance - amount,
+            Self::Income => balance
+                .checked_add(amount)
+                .ok_or_else(|| "Dépassement de montant dans le calcul du solde.".into()),
+            Self::Expense => balance
+                .checked_sub(amount)
+                .ok_or_else(|| "Dépassement de montant dans le calcul du solde.".into()),
         }
     }
 }
@@ -110,10 +114,15 @@ impl Transaction {
         self.recurring_rule_id.is_some()
     }
 
-    pub fn signed_amount(&self) -> Money {
+    pub fn signed_amount(&self) -> Result<Money, String> {
         match self.kind {
-            TransactionKind::Income => self.amount,
-            TransactionKind::Expense => Money::from_cents(-self.amount.cents),
+            TransactionKind::Income => Ok(self.amount),
+            TransactionKind::Expense => self
+                .amount
+                .cents
+                .checked_neg()
+                .map(Money::from_cents)
+                .ok_or_else(|| "Dépassement de montant.".to_string()),
         }
     }
 }

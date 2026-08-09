@@ -17,10 +17,14 @@ pub fn calculer_resume_budget(
         Money::from_cents(tx_repo::sum_pending_by_kind(pool, year, month, "expense")?);
     let total_income = Money::from_cents(tx_repo::sum_by_kind(pool, year, month, "income")?);
     let total_expenses = Money::from_cents(tx_repo::sum_by_kind(pool, year, month, "expense")?);
-    let completed_income = total_income - pending_income;
-    let completed_expenses = total_expenses - pending_expenses;
+    let completed_income = total_income
+        .checked_sub(pending_income)
+        .ok_or_else(|| "Dépassement de montant dans le calcul du budget.".to_string())?;
+    let completed_expenses = total_expenses
+        .checked_sub(pending_expenses)
+        .ok_or_else(|| "Dépassement de montant dans le calcul du budget.".to_string())?;
 
-    Ok(BudgetSummary::compute(
+    BudgetSummary::compute(
         settings.current_balance,
         settings.overdraft_limit,
         pending_income,
@@ -29,5 +33,5 @@ pub fn calculer_resume_budget(
         total_expenses,
         completed_income,
         completed_expenses,
-    ))
+    )
 }

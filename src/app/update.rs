@@ -738,7 +738,9 @@ fn ouvrir_lien(url: &str) -> Result<(), String> {
 /// Met un montant sous une forme directement réutilisable dans un champ de
 /// saisie : sans séparateur de milliers ni symbole, virgule décimale.
 pub fn montant_editable(montant: Money) -> String {
-    format!("{:.2}", montant.to_euros_f64()).replace('.', ",")
+    let signe = if montant.cents < 0 { "-" } else { "" };
+    let abs = montant.cents.unsigned_abs();
+    format!("{}{},{:02}", signe, abs / 100, abs % 100)
 }
 
 /// Applique et persiste un mode de thème.

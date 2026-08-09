@@ -87,8 +87,13 @@ pub fn transactions_recentes(
 ///
 /// Utilisé pour afficher le total des lignes réellement visibles après
 /// filtrage, ce qui donne un sens immédiat au filtre appliqué.
-pub fn solde_des(transactions: &[Transaction]) -> Money {
-    transactions.iter().fold(Money::ZERO, |total, transaction| {
-        total + transaction.signed_amount()
-    })
+pub fn solde_des(transactions: &[Transaction]) -> Result<Money, String> {
+    let mut total = Money::ZERO;
+    for transaction in transactions {
+        let signe = transaction.signed_amount()?;
+        total = total
+            .checked_add(signe)
+            .ok_or_else(|| "Dépassement de montant dans le total des lignes.".to_string())?;
+    }
+    Ok(total)
 }

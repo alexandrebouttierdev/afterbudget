@@ -184,6 +184,7 @@ mod tests {
             Money::ZERO,
             Money::ZERO,
         )
+        .unwrap()
     }
 
     /// Chaque état financier doit avoir un ton **et** une icône distincts.

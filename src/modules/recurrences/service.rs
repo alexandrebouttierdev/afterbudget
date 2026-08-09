@@ -85,5 +85,5 @@ pub fn total_mensuel(regles: &[RecurringRule], genre: TransactionKind) -> Money 
     regles
         .iter()
         .filter(|r| r.is_active && r.kind == genre)
-        .fold(Money::ZERO, |total, r| total + r.amount)
+        .fold(Money::ZERO, |total, r| total.saturating_add(r.amount))
 }
